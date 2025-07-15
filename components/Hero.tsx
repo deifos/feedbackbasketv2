@@ -1,28 +1,28 @@
-import { Button } from "@/components/ui/button"
-import { Container } from "@/components/ui/container"
-import { FlyingEnvelopes } from "@/components/ui/flying-envelopes"
-import { ArrowRight, Play, Mail } from "lucide-react"
+import { Button } from '@/components/ui/button';
+import { Container } from '@/components/ui/container';
+import { FlyingEnvelopes } from '@/components/ui/flying-envelopes';
+import { ArrowRight, Play } from 'lucide-react';
 
 export function Hero() {
   return (
     <section className="relative py-20 lg:py-32 bg-gradient-to-b from-background to-muted/20 overflow-hidden">
       <FlyingEnvelopes />
-      
+
       <Container>
         <div className="relative text-center max-w-4xl mx-auto z-10">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Turn feedback into{" "}
+            Turn feedback into{' '}
             <span className="bg-gradient-to-r from-sky-400 to-blue-600 bg-clip-text text-transparent">
               action
-            </span>{" "}
+            </span>{' '}
             — instantly.
           </h1>
-          
+
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            Collect user feedback and let AI help you triage, respond, and fix what matters. 
-            Build better products with intelligent feedback management.
+            Collect user feedback and let AI help you triage, respond, and fix what matters. Build
+            better products with intelligent feedback management.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button size="lg" className="text-base px-8" asChild>
               <a href="#pricing">
@@ -37,7 +37,7 @@ export function Hero() {
               </a>
             </Button>
           </div>
-          
+
           <div className="relative">
             <div className="bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-900/20 dark:to-blue-900/20 rounded-2xl p-8 border">
               <div className="bg-white dark:bg-card rounded-lg shadow-lg p-6 max-w-md mx-auto">
@@ -62,5 +62,5 @@ export function Hero() {
         </div>
       </Container>
     </section>
-  )
+  );
 }
