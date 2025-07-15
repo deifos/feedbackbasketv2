@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Container } from "@/components/ui/container"
-import { Widget, MessageSquare, Brain, Zap } from "lucide-react"
+import { Badge as Widget, MessageSquare, Brain, Zap } from "lucide-react"
 
 const steps = [
   {
