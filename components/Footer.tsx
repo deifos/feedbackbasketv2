@@ -58,33 +58,23 @@ export function Footer() {
             </div>
             
             <div>
-              <h3 className="font-semibold mb-4">Resources</h3>
+              <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Documentation
+                  <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link href="/guides" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Guides
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/api" className="text-muted-foreground hover:text-foreground transition-colors">
-                    API Reference
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Support
+                  <Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Terms of Service
                   </Link>
                 </li>
               </ul>
             </div>
             
             <div>
-              <h3 className="font-semibold mb-4">Company</h3>
+              <h3 className="font-semibold mb-4">More</h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link href="/about" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -94,11 +84,6 @@ export function Footer() {
                 <li>
                   <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
                     Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/careers" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Careers
                   </Link>
                 </li>
                 <li>
@@ -115,11 +100,8 @@ export function Footer() {
               © 2025 FeedbackBasket. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 sm:mt-0">
-              <Link href="/privacy" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
-                Terms of Service
+              <Link href="/status" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
+                Status
               </Link>
             </div>
           </div>
