@@ -41,6 +41,10 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Bulk selection state
+  const [selectedFeedbackIds, setSelectedFeedbackIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   // Advanced filtering, sorting, and pagination with useMemo for performance
   const { paginatedFeedback, totalPages, totalFilteredItems } = useMemo(() => {
     let filtered = feedback;
@@ -85,6 +89,55 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
   // Reset to first page when filters change
   const resetPagination = () => {
     setCurrentPage(1);
+  };
+
+  // Bulk selection functions
+  const handleSelectAll = () => {
+    if (selectedFeedbackIds.size === paginatedFeedback.length) {
+      // Deselect all
+      setSelectedFeedbackIds(new Set());
+    } else {
+      // Select all on current page
+      setSelectedFeedbackIds(new Set(paginatedFeedback.map(f => f.id)));
+    }
+  };
+
+  const handleSelectFeedback = (feedbackId: string) => {
+    const newSelected = new Set(selectedFeedbackIds);
+    if (newSelected.has(feedbackId)) {
+      newSelected.delete(feedbackId);
+    } else {
+      newSelected.add(feedbackId);
+    }
+    setSelectedFeedbackIds(newSelected);
+  };
+
+  const handleBulkStatusChange = async (newStatus: 'PENDING' | 'REVIEWED' | 'DONE') => {
+    if (selectedFeedbackIds.size === 0) return;
+
+    setBulkActionLoading(true);
+    try {
+      // Update all selected feedback items
+      const promises = Array.from(selectedFeedbackIds).map(feedbackId =>
+        fetch(`/api/feedback/${feedbackId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        })
+      );
+
+      await Promise.all(promises);
+
+      // Clear selection and refresh
+      setSelectedFeedbackIds(new Set());
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to update bulk status:', error);
+    } finally {
+      setBulkActionLoading(false);
+    }
   };
 
   const handleStatusChange = async (
@@ -192,11 +245,75 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
                   </div>
                 ) : (
                   <>
+                    {/* Bulk Actions Bar */}
+                    {paginatedFeedback.length > 0 && (
+                      <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center space-x-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={
+                                selectedFeedbackIds.size === paginatedFeedback.length &&
+                                paginatedFeedback.length > 0
+                              }
+                              onChange={handleSelectAll}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium">
+                              {selectedFeedbackIds.size === paginatedFeedback.length &&
+                              paginatedFeedback.length > 0
+                                ? 'Deselect All'
+                                : 'Select All'}
+                            </span>
+                          </label>
+
+                          {selectedFeedbackIds.size > 0 && (
+                            <span className="text-sm text-gray-600">
+                              {selectedFeedbackIds.size} item
+                              {selectedFeedbackIds.size !== 1 ? 's' : ''} selected
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Bulk Action Buttons */}
+                        {selectedFeedbackIds.size > 0 && (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleBulkStatusChange('PENDING')}
+                              disabled={bulkActionLoading}
+                              className="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-md hover:bg-orange-200 disabled:opacity-50"
+                            >
+                              Mark Pending
+                            </button>
+                            <button
+                              onClick={() => handleBulkStatusChange('REVIEWED')}
+                              disabled={bulkActionLoading}
+                              className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200 disabled:opacity-50"
+                            >
+                              Mark Reviewed
+                            </button>
+                            <button
+                              onClick={() => handleBulkStatusChange('DONE')}
+                              disabled={bulkActionLoading}
+                              className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200 disabled:opacity-50"
+                            >
+                              Mark Done
+                            </button>
+                            {bulkActionLoading && (
+                              <span className="text-sm text-gray-500">Updating...</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-4">
                       {paginatedFeedback.map(item => (
                         <FeedbackItem
                           key={item.id}
                           feedback={item}
+                          isSelected={selectedFeedbackIds.has(item.id)}
+                          onSelect={() => handleSelectFeedback(item.id)}
                           onStatusChange={handleStatusChange}
                           onNotesUpdate={(feedbackId, notes) => {
                             // Update notes via API

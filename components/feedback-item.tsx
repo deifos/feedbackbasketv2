@@ -7,11 +7,19 @@ import { Feedback } from '@/app/generated/prisma';
 
 interface FeedbackItemProps {
   feedback: Feedback;
+  isSelected?: boolean;
+  onSelect?: () => void;
   onStatusChange: (feedbackId: string, newStatus: 'PENDING' | 'REVIEWED' | 'DONE') => void;
   onNotesUpdate: (feedbackId: string, notes: string) => void;
 }
 
-export function FeedbackItem({ feedback, onStatusChange, onNotesUpdate }: FeedbackItemProps) {
+export function FeedbackItem({
+  feedback,
+  isSelected = false,
+  onSelect,
+  onStatusChange,
+  onNotesUpdate,
+}: FeedbackItemProps) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteText, setNoteText] = useState(feedback.notes || '');
 
@@ -39,10 +47,19 @@ export function FeedbackItem({ feedback, onStatusChange, onNotesUpdate }: Feedba
   };
 
   return (
-    <Card className="relative">
+    <Card className={`relative ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-2">
+            {/* Selection Checkbox */}
+            {onSelect && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={onSelect}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            )}
             <Badge className={getStatusColor(feedback.status)}>{feedback.status}</Badge>
             <div className="flex items-center text-sm text-muted-foreground">
               <Calendar className="w-4 h-4 mr-1" />
