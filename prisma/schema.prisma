@@ -25,6 +25,7 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
+  projects      Project[]
 
   @@unique([email])
   @@map("user")
@@ -73,4 +74,61 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customization ProjectCustomization?
+  feedback      Feedback[]
+
+  @@map("project")
+}
+
+model ProjectCustomization {
+  id             String  @id @default(cuid())
+  projectId      String  @unique
+  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  buttonColor    String  @default("#3b82f6")
+  buttonRadius   Int     @default(8)
+  buttonLabel    String  @default("Feedback")
+  introMessage   String  @default("We'd love to hear your thoughts! Your feedback helps us improve.")
+  successMessage String  @default("Thank you for your feedback!")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("project_customization")
+}
+
+model Feedback {
+  id        String        @id @default(cuid())
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  content   String
+  email     String?
+  status    FeedbackStatus @default(PENDING)
+  notes     String?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("feedback")
+}
+
+enum FeedbackStatus {
+  PENDING
+  REVIEWED
+  DONE
 }
