@@ -7,7 +7,8 @@ import { CustomizationUpdateRequest } from '@/lib/types/api';
 const prisma = new PrismaClient();
 
 // GET /api/projects/[id]/customization - Get project customization
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
@@ -69,7 +70,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/projects/[id]/customization - Update project customization
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({

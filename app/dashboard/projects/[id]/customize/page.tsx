@@ -7,12 +7,13 @@ import { WidgetCustomizationPage } from '@/components/widget-customization-page'
 const prisma = new PrismaClient();
 
 interface CustomizePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default async function CustomizePage({ params }: CustomizePageProps) {
+export default async function CustomizePage(props: CustomizePageProps) {
+  const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
   });

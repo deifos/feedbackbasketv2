@@ -7,7 +7,8 @@ import { ScriptGenerationResponse, WidgetConfig } from '@/lib/types/api';
 const prisma = new PrismaClient();
 
 // GET /api/projects/[id]/script - Generate widget script
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
