@@ -1,28 +1,15 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import {
-  ArrowLeft,
-  MessageSquare,
-  Settings,
-  ExternalLink,
-  Calendar,
-  Mail,
-  Edit3,
-  Check,
-  X,
-  Search,
-  Filter,
-  SortAsc,
-  SortDesc,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { ProjectHeader } from '@/components/project-header';
+import { ProjectStats } from '@/components/project-stats';
+import { FeedbackFilters } from '@/components/feedback-filters';
+import { FeedbackItem } from '@/components/feedback-item';
+import { PaginationControls } from '@/components/pagination-controls';
 import { Project, ProjectCustomization, Feedback } from '@/app/generated/prisma';
 
 interface ProjectDashboardProps {
@@ -48,8 +35,7 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'PENDING' | 'REVIEWED' | 'DONE'>(
     'all'
   );
-  const [editingNotes, setEditingNotes] = useState<string | null>(null);
-  const [noteText, setNoteText] = useState('');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,128 +109,14 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
     }
   };
 
-  const handleNotesUpdate = async (feedbackId: string) => {
-    try {
-      const response = await fetch(`/api/feedback/${feedbackId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ notes: noteText }),
-      });
-
-      if (response.ok) {
-        setEditingNotes(null);
-        setNoteText('');
-        // Refresh the page to show updated data
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Failed to update notes:', error);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'REVIEWED':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'DONE':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader user={user} />
 
       <main className="container mx-auto py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
+        <ProjectHeader project={project} />
 
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{project.name}</h1>
-              <div className="flex items-center text-muted-foreground mb-4">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                <a
-                  href={project.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:underline"
-                >
-                  {project.url}
-                </a>
-              </div>
-            </div>
-
-            <div className="flex space-x-2">
-              <Link href={`/dashboard/projects/${project.id}/customize`}>
-                <Button variant="outline">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Customize Widget
-                </Button>
-              </Link>
-              <Link href={`/dashboard/projects/${project.id}/install`}>
-                <Button>Get Embed Code</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Overview */}
-        <div className="grid gap-6 md:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Feedback</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <MessageSquare className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Reviewed</CardTitle>
-              <MessageSquare className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.reviewed}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Done</CardTitle>
-              <MessageSquare className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.done}</div>
-            </CardContent>
-          </Card>
-        </div>
+        <ProjectStats stats={stats} />
 
         {/* Feedback Management */}
         <Card>
@@ -255,56 +127,22 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Filtering Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              {/* Search Input */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Search feedback content, email, or notes..."
-                    value={searchQuery}
-                    onChange={e => {
-                      setSearchQuery(e.target.value);
-                      resetPagination();
-                    }}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              {/* Sort Controls */}
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
-                  className="flex items-center space-x-2"
-                >
-                  {sortOrder === 'newest' ? (
-                    <SortDesc className="w-4 h-4" />
-                  ) : (
-                    <SortAsc className="w-4 h-4" />
-                  )}
-                  <span>{sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}</span>
-                </Button>
-
-                {/* Clear Filters */}
-                {(searchQuery || selectedStatus !== 'all' || sortOrder !== 'newest') && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedStatus('all');
-                      setSortOrder('newest');
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </div>
-            </div>
+            <FeedbackFilters
+              searchQuery={searchQuery}
+              sortOrder={sortOrder}
+              selectedStatus={selectedStatus}
+              onSearchChange={query => {
+                setSearchQuery(query);
+                resetPagination();
+              }}
+              onSortChange={setSortOrder}
+              onClearFilters={() => {
+                setSearchQuery('');
+                setSelectedStatus('all');
+                setSortOrder('newest');
+                resetPagination();
+              }}
+            />
 
             <Tabs
               value={selectedStatus}
@@ -356,181 +194,27 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
                   <>
                     <div className="space-y-4">
                       {paginatedFeedback.map(item => (
-                        <Card key={item.id} className="relative">
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex items-center space-x-2">
-                                <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-                                <div className="flex items-center text-sm text-muted-foreground">
-                                  <Calendar className="w-4 h-4 mr-1" />
-                                  {new Date(item.createdAt).toLocaleDateString()} at{' '}
-                                  {new Date(item.createdAt).toLocaleTimeString()}
-                                </div>
-                              </div>
-
-                              {/* Status Change Buttons */}
-                              <div className="flex space-x-1">
-                                {item.status !== 'PENDING' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleStatusChange(item.id, 'PENDING')}
-                                    className="text-orange-600 hover:text-orange-700"
-                                  >
-                                    Mark Pending
-                                  </Button>
-                                )}
-                                {item.status !== 'REVIEWED' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleStatusChange(item.id, 'REVIEWED')}
-                                    className="text-blue-600 hover:text-blue-700"
-                                  >
-                                    Mark Reviewed
-                                  </Button>
-                                )}
-                                {item.status !== 'DONE' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleStatusChange(item.id, 'DONE')}
-                                    className="text-green-600 hover:text-green-700"
-                                  >
-                                    Mark Done
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Feedback Content */}
-                            <div className="mb-4">
-                              <p className="text-gray-900 leading-relaxed">{item.content}</p>
-                            </div>
-
-                            {/* Email if provided */}
-                            {item.email && (
-                              <div className="flex items-center text-sm text-muted-foreground mb-4">
-                                <Mail className="w-4 h-4 mr-2" />
-                                <a href={`mailto:${item.email}`} className="hover:underline">
-                                  {item.email}
-                                </a>
-                              </div>
-                            )}
-
-                            {/* Notes Section */}
-                            <div className="border-t pt-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-sm font-medium text-gray-700">Private Notes</h4>
-                                {editingNotes !== item.id && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingNotes(item.id);
-                                      setNoteText(item.notes || '');
-                                    }}
-                                  >
-                                    <Edit3 className="w-4 h-4 mr-1" />
-                                    {item.notes ? 'Edit' : 'Add'} Notes
-                                  </Button>
-                                )}
-                              </div>
-
-                              {editingNotes === item.id ? (
-                                <div className="space-y-2">
-                                  <textarea
-                                    value={noteText}
-                                    onChange={e => setNoteText(e.target.value)}
-                                    placeholder="Add private notes about this feedback..."
-                                    className="w-full p-2 border border-gray-300 rounded-md resize-none h-20 text-sm"
-                                  />
-                                  <div className="flex space-x-2">
-                                    <Button size="sm" onClick={() => handleNotesUpdate(item.id)}>
-                                      <Check className="w-4 h-4 mr-1" />
-                                      Save
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setEditingNotes(null);
-                                        setNoteText('');
-                                      }}
-                                    >
-                                      <X className="w-4 h-4 mr-1" />
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-sm text-gray-600">
-                                  {item.notes || (
-                                    <span className="italic text-gray-400">No notes added yet</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <FeedbackItem
+                          key={item.id}
+                          feedback={item}
+                          onStatusChange={handleStatusChange}
+                          onNotesUpdate={(feedbackId, notes) => {
+                            // Update notes via API
+                            fetch(`/api/feedback/${feedbackId}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ notes }),
+                            }).then(() => window.location.reload());
+                          }}
+                        />
                       ))}
                     </div>
 
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                        <div className="text-sm text-muted-foreground">
-                          Page {currentPage} of {totalPages}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                          >
-                            Previous
-                          </Button>
-
-                          {/* Page numbers */}
-                          <div className="flex items-center space-x-1">
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                              let pageNum;
-                              if (totalPages <= 5) {
-                                pageNum = i + 1;
-                              } else if (currentPage <= 3) {
-                                pageNum = i + 1;
-                              } else if (currentPage >= totalPages - 2) {
-                                pageNum = totalPages - 4 + i;
-                              } else {
-                                pageNum = currentPage - 2 + i;
-                              }
-
-                              return (
-                                <Button
-                                  key={pageNum}
-                                  variant={currentPage === pageNum ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => setCurrentPage(pageNum)}
-                                  className="w-8 h-8 p-0"
-                                >
-                                  {pageNum}
-                                </Button>
-                              );
-                            })}
-                          </div>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                    <PaginationControls
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
                   </>
                 )}
               </TabsContent>
