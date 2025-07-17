@@ -7,12 +7,13 @@ import { ProjectDashboard } from '@/components/project-dashboard';
 const prisma = new PrismaClient();
 
 interface ProjectPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
+export default async function ProjectPage(props: ProjectPageProps) {
+  const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
   });

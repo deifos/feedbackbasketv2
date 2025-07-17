@@ -6,7 +6,8 @@ import { PrismaClient } from '@/app/generated/prisma';
 const prisma = new PrismaClient();
 
 // PUT /api/feedback/[id] - Update feedback status or notes
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
@@ -100,7 +101,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/feedback/[id] - Delete feedback
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({

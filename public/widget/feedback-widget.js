@@ -69,8 +69,8 @@
 
       this.createButton();
       this.createModal();
-      this.attachEventListeners();
       this.addToPage();
+      this.attachEventListeners();
     },
 
     // Create the feedback button

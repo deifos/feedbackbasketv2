@@ -1,20 +1,22 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { FeedbackWidget } from '@/components/feedback-widget';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "FeedbackBasket - Turn feedback into action, instantly",
-  description: "Collect user feedback and let AI help you triage, respond, and fix what matters. Build better products with intelligent feedback management.",
+  title: 'FeedbackBasket - Turn feedback into action, instantly',
+  description:
+    'Collect user feedback and let AI help you triage, respond, and fix what matters. Build better products with intelligent feedback management.',
 };
 
 export default function RootLayout({
@@ -24,10 +26,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
+
+        {/* Feedback Widget */}
+        <FeedbackWidget
+          projectId="cmd6rlep10001sbix2w6kyc73"
+          apiEndpoint="http://localhost:3000/api/widget/feedback"
+          buttonColor="#3b82f6"
+          buttonRadius={8}
+          buttonLabel="Feedback"
+          introMessage="We'd love to hear your thoughts! Your feedback helps us improve."
+          successMessage="Thank you for your feedback!"
+        />
       </body>
     </html>
   );

@@ -7,12 +7,13 @@ import { ScriptInstallationGuide } from '@/components/script-installation-guide'
 const prisma = new PrismaClient();
 
 interface InstallPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default async function InstallPage({ params }: InstallPageProps) {
+export default async function InstallPage(props: InstallPageProps) {
+  const params = await props.params;
   const session = await auth.api.getSession({
     headers: await headers(),
   });
