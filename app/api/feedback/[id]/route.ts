@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     // Validate input using Zod schema
     const validationResult = feedbackUpdateSchema.safeParse(body);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(err => ({
+      const errors = validationResult.error.issues.map(err => ({
         field: err.path.join('.'),
         message: err.message,
       }));

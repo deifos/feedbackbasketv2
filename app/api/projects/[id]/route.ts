@@ -3,6 +3,8 @@ import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { PrismaClient } from '@/app/generated/prisma';
 import { ProjectWithCounts, ApiError } from '@/lib/types/api';
+import { projectSchema } from '@/lib/validation';
+import { sanitizeProjectName, sanitizeUrl } from '@/lib/sanitization';
 
 const prisma = new PrismaClient();
 
@@ -94,56 +96,44 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     const { id } = params;
 
-    // Parse and validate request body
+    // Parse request body
     const body = await request.json();
-    const { name, url } = body;
 
-    // Validate required fields
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Project name is required and must be a string' },
-        { status: 400 }
-      );
-    }
+    // Validate input using Zod schema
+    const validationResult = projectSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message,
+      }));
 
-    if (!url || typeof url !== 'string') {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Project URL is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    // Validate and sanitize inputs
-    const sanitizedName = name.trim();
-    const sanitizedUrl = url.trim();
-
-    if (sanitizedName.length === 0) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Project name cannot be empty' },
-        { status: 400 }
-      );
-    }
-
-    if (sanitizedName.length > 100) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Project name must be 100 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    // Validate URL format
-    try {
-      const urlObj = new URL(sanitizedUrl);
-      // Ensure it's http or https
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
-        throw new Error('Invalid protocol');
-      }
-    } catch (error) {
       return NextResponse.json(
         {
           error: 'Validation Error',
-          message: 'Please provide a valid URL (must include http:// or https://)',
+          message: 'Invalid input data',
+          details: errors,
         },
+        { status: 400 }
+      );
+    }
+
+    const { name, url } = validationResult.data;
+
+    // Sanitize inputs to prevent XSS and other attacks
+    const sanitizedName = sanitizeProjectName(name);
+    const sanitizedUrl = sanitizeUrl(url);
+
+    // Double-check sanitized inputs aren't empty after sanitization
+    if (!sanitizedName || sanitizedName.length === 0) {
+      return NextResponse.json(
+        { error: 'Validation Error', message: 'Project name cannot be empty after sanitization' },
+        { status: 400 }
+      );
+    }
+
+    if (!sanitizedUrl || sanitizedUrl.length === 0) {
+      return NextResponse.json(
+        { error: 'Validation Error', message: 'Invalid URL provided' },
         { status: 400 }
       );
     }

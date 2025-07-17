@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/app/generated/prisma';
-import { FeedbackSubmissionRequest, FeedbackSubmissionResponse } from '@/lib/types/api';
 import { feedbackSchema } from '@/lib/validation';
 import { sanitizeFeedbackContent, sanitizeEmail } from '@/lib/sanitization';
 import { rateLimitFeedback } from '@/lib/rate-limit';
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Validate input using Zod schema
     const validationResult = feedbackSchema.safeParse(body);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(err => ({
+      const errors = validationResult.error.issues.map(err => ({
         field: err.path.join('.'),
         message: err.message,
       }));
