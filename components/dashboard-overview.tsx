@@ -174,7 +174,7 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
 
                     {/* Action Buttons */}
                     <div className="flex gap-2">
-                      <Link href={`/dashboard/projects/${project.id}`} className="flex-1">
+                      <Link href={`/dashboard/projects/${project.id}`} className="flex-1" prefetch>
                         <Button variant="outline" size="sm" className="w-full">
                           <MessageSquare className="w-4 h-4 mr-2" />
                           View Feedback

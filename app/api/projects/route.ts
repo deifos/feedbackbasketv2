@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get pending feedback counts for all projects in a single query
+    // Get pending feedback counts for all projects in a single optimized query
+    // This now uses the composite index (projectId, status) for better performance
     const pendingCounts = await prisma.feedback.groupBy({
       by: ['projectId'],
       where: {

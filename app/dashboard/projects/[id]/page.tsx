@@ -24,7 +24,7 @@ export default async function ProjectPage(props: ProjectPageProps) {
 
   const { id } = params;
 
-  // Fetch the project with feedback
+  // Fetch the project (without all feedback to improve performance)
   const project = await prisma.project.findFirst({
     where: {
       id: id,
@@ -32,16 +32,6 @@ export default async function ProjectPage(props: ProjectPageProps) {
     },
     include: {
       customization: true,
-      feedback: {
-        orderBy: {
-          createdAt: 'desc',
-        },
-      },
-      _count: {
-        select: {
-          feedback: true,
-        },
-      },
     },
   });
 
@@ -49,21 +39,52 @@ export default async function ProjectPage(props: ProjectPageProps) {
     redirect('/dashboard');
   }
 
-  // Calculate feedback statistics
-  const feedbackStats = {
-    total: project.feedback.length,
-    pending: project.feedback.filter(f => f.status === 'PENDING').length,
-    reviewed: project.feedback.filter(f => f.status === 'REVIEWED').length,
-    done: project.feedback.filter(f => f.status === 'DONE').length,
+  // Fetch feedback statistics efficiently using database aggregation
+  const [feedbackStats, recentFeedback] = await Promise.all([
+    // Get feedback counts by status in a single optimized query
+    prisma.feedback.groupBy({
+      by: ['status'],
+      where: {
+        projectId: project.id,
+      },
+      _count: {
+        id: true,
+      },
+    }),
+    // Get recent feedback for initial display (first page)
+    prisma.feedback.findMany({
+      where: {
+        projectId: project.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50, // Limit initial load to 50 items for better performance
+    }),
+  ]);
+
+  // Transform stats into the expected format
+  const statsMap = new Map(feedbackStats.map(stat => [stat.status, stat._count.id]));
+  const stats = {
+    total: feedbackStats.reduce((sum, stat) => sum + stat._count.id, 0),
+    pending: statsMap.get('PENDING') || 0,
+    reviewed: statsMap.get('REVIEWED') || 0,
+    done: statsMap.get('DONE') || 0,
+  };
+
+  // Add feedback to project object for compatibility
+  const projectWithFeedback = {
+    ...project,
+    feedback: recentFeedback,
   };
 
   await prisma.$disconnect();
 
   return (
     <ProjectDashboard
-      project={project}
-      feedback={project.feedback}
-      stats={feedbackStats}
+      project={projectWithFeedback}
+      feedback={recentFeedback}
+      stats={stats}
       user={session.user}
     />
   );

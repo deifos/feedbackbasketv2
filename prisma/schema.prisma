@@ -88,6 +88,9 @@ model Project {
   customization ProjectCustomization?
   feedback      Feedback[]
 
+  // Performance indexes
+  @@index([userId])
+  @@index([userId, updatedAt])
   @@map("project")
 }
 
@@ -124,6 +127,13 @@ model Feedback {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Performance indexes
+  @@index([projectId])
+  @@index([status])
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
+  @@index([createdAt])
+  @@index([ipAddress, createdAt]) // For rate limiting queries
   @@map("feedback")
 }
 

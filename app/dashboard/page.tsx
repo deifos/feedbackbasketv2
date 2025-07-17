@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       },
     });
 
-    // Get pending feedback counts for all projects
+    // Get pending feedback counts for all projects (optimized with index)
     const pendingCounts = await prisma.feedback.groupBy({
       by: ['projectId'],
       where: {
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             <div>
               <h1 className="text-3xl font-bold">Welcome back, {session.user.name}!</h1>
               <p className="text-muted-foreground">
-                Here's what's happening with your feedback projects.
+                Here's what's happening with your projects feedback.
               </p>
             </div>
 
