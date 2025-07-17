@@ -35,7 +35,14 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
 
   const handleUpdateProject = async (
     projectId: string,
-    updates: { name: string; description: string }
+    updates: {
+      name: string;
+      description: string;
+      logoUrl?: string;
+      ogImageUrl?: string;
+      aiGenerated?: boolean;
+      lastAnalyzedAt?: Date;
+    }
   ) => {
     try {
       const response = await fetch(`/api/projects/${projectId}`, {

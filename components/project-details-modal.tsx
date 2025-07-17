@@ -21,7 +21,17 @@ interface ProjectDetailsModalProps {
   };
   isOpen: boolean;
   onClose: () => void;
-  onUpdate?: (projectId: string, updates: { name: string; description: string }) => void;
+  onUpdate?: (
+    projectId: string,
+    updates: {
+      name: string;
+      description: string;
+      logoUrl?: string;
+      ogImageUrl?: string;
+      aiGenerated?: boolean;
+      lastAnalyzedAt?: Date;
+    }
+  ) => void;
   onDelete?: (projectId: string) => void;
 }
 
@@ -40,6 +50,14 @@ export function ProjectDetailsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{
+    title: string;
+    description: string;
+    aiDescription: string;
+    logoUrl?: string;
+    ogImageUrl?: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -48,8 +66,18 @@ export function ProjectDetailsModal({
 
     setIsSaving(true);
     try {
-      await onUpdate(project.id, editData);
+      const updates = {
+        ...editData,
+        ...(analysisResult && {
+          logoUrl: analysisResult.logoUrl,
+          ogImageUrl: analysisResult.ogImageUrl,
+          aiGenerated: !!analysisResult.aiDescription,
+          lastAnalyzedAt: new Date(),
+        }),
+      };
+      await onUpdate(project.id, updates);
       setIsEditing(false);
+      setAnalysisResult(null); // Clear analysis result after saving
     } catch (error) {
       console.error('Failed to update project:', error);
     } finally {
@@ -77,6 +105,46 @@ export function ProjectDetailsModal({
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleAnalyzeWebsite = async () => {
+    setIsAnalyzing(true);
+
+    try {
+      const response = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: project.url }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze website');
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setAnalysisResult(result.data);
+
+        // Auto-fill the description with AI-generated content
+        if (result.data.aiDescription) {
+          setEditData(prev => ({
+            ...prev,
+            description: result.data.aiDescription,
+          }));
+        }
+      } else {
+        throw new Error(result.error || 'Failed to analyze website');
+      }
+    } catch (error) {
+      console.error('Website analysis failed:', error);
+      // You could add a toast notification here for better UX
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -160,9 +228,22 @@ export function ProjectDetailsModal({
 
           {/* Description */}
           <div>
-            <Label className="text-sm font-medium">
-              {project.aiGenerated ? 'AI-Generated Description' : 'Description'}
-            </Label>
+            <div className="flex justify-between items-center">
+              <Label className="text-sm font-medium">
+                {project.aiGenerated ? 'AI-Generated Description' : 'Description'}
+              </Label>
+              {isEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzeWebsite}
+                  disabled={isAnalyzing}
+                >
+                  {isAnalyzing ? 'Analyzing...' : 'Analyze Website'}
+                </Button>
+              )}
+            </div>
             {isEditing ? (
               <textarea
                 value={editData.description}
@@ -179,21 +260,42 @@ export function ProjectDetailsModal({
                 )}
               </div>
             )}
+            {isEditing && analysisResult && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 font-medium mb-1">
+                  ✓ Website analyzed successfully!
+                </p>
+                <p className="text-xs text-green-700">
+                  The description above has been updated with AI-generated content from your
+                  website.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Preview Image */}
-          {project.ogImageUrl && (
-            <div>
-              <Label className="text-sm font-medium">Website Preview</Label>
-              <div className="mt-2 relative h-48 bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src={project.ogImageUrl}
-                  alt={`${project.name} preview`}
-                  className="w-full h-full object-cover"
-                />
+          {(() => {
+            const imageUrl = analysisResult?.ogImageUrl || project.ogImageUrl;
+            if (!imageUrl) return null;
+
+            return (
+              <div>
+                <Label className="text-sm font-medium">Website Preview</Label>
+                <div className="mt-2 relative h-48 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={imageUrl}
+                    alt={`${project.name} preview`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {analysisResult?.ogImageUrl && analysisResult.ogImageUrl !== project.ogImageUrl && (
+                  <p className="text-xs text-green-700 mt-1">
+                    ✓ Updated preview image from website analysis
+                  </p>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Analysis Info */}
           {project.lastAnalyzedAt && (

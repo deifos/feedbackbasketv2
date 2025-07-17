@@ -6,7 +6,8 @@ import { sanitizeProjectName } from '@/lib/sanitization';
 
 const prisma = new PrismaClient();
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
@@ -60,6 +61,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
+    if (body.logoUrl !== undefined) {
+      updates.logoUrl = body.logoUrl || null;
+    }
+
+    if (body.ogImageUrl !== undefined) {
+      updates.ogImageUrl = body.ogImageUrl || null;
+    }
+
+    if (body.aiGenerated !== undefined) {
+      updates.aiGenerated = body.aiGenerated;
+    }
+
+    if (body.lastAnalyzedAt !== undefined) {
+      updates.lastAnalyzedAt = body.lastAnalyzedAt ? new Date(body.lastAnalyzedAt) : null;
+    }
+
     // Update the project
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
@@ -98,7 +115,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
@@ -149,7 +167,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
