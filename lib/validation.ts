@@ -19,6 +19,11 @@ export const projectSchema = z.object({
         return false;
       }
     }, 'URL must use HTTP or HTTPS protocol'),
+  description: z
+    .string()
+    .max(500, 'Description must be less than 500 characters')
+    .trim()
+    .optional(),
 });
 
 // Feedback validation schema

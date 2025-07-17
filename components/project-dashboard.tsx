@@ -12,7 +12,15 @@ import { FeedbackItem } from '@/components/feedback-item';
 import { PaginationControls } from '@/components/pagination-controls';
 import { CategoryFilterCard } from '@/components/category-filter-card';
 import { SentimentFilterCard } from '@/components/sentiment-filter-card';
+import { ProjectDetailsModal } from '@/components/project-details-modal';
+import { BulkActionsBar } from '@/components/bulk-actions-bar';
 import { Project, ProjectCustomization, Feedback } from '@/app/generated/prisma';
+import { useFeedbackFilters } from '@/hooks/use-feedback-filters';
+import {
+  calculateEnhancedStats,
+  calculateCategoryCounts,
+  calculateSentimentCounts,
+} from '@/lib/feedback-stats';
 
 interface ProjectDashboardProps {
   project: Project & {
@@ -34,143 +42,75 @@ interface ProjectDashboardProps {
 }
 
 export function ProjectDashboard({ project, feedback, stats, user }: ProjectDashboardProps) {
-  // Calculate additional stats for AI analysis
-  const enhancedStats = useMemo(() => {
-    const bugs = feedback.filter(
-      f => f.category === 'BUG' || (f.categoryOverridden && f.manualCategory === 'BUG')
-    ).length;
+  // Calculate additional stats for AI analysis using helper function
+  const enhancedStats = useMemo(() => calculateEnhancedStats(feedback, stats), [feedback, stats]);
 
-    const features = feedback.filter(
-      f => f.category === 'FEATURE' || (f.categoryOverridden && f.manualCategory === 'FEATURE')
-    ).length;
-
-    const reviews = feedback.filter(
-      f => f.category === 'REVIEW' || (f.categoryOverridden && f.manualCategory === 'REVIEW')
-    ).length;
-
-    const positive = feedback.filter(
-      f => f.sentiment === 'POSITIVE' || (f.sentimentOverridden && f.manualSentiment === 'POSITIVE')
-    ).length;
-
-    const neutral = feedback.filter(
-      f => f.sentiment === 'NEUTRAL' || (f.sentimentOverridden && f.manualSentiment === 'NEUTRAL')
-    ).length;
-
-    const negative = feedback.filter(
-      f => f.sentiment === 'NEGATIVE' || (f.sentimentOverridden && f.manualSentiment === 'NEGATIVE')
-    ).length;
-
-    // Calculate items that need attention (negative sentiment + bugs)
-    const needsAttention = feedback.filter(f => {
-      const effectiveSentiment =
-        f.sentimentOverridden && f.manualSentiment ? f.manualSentiment : f.sentiment;
-      const effectiveCategory =
-        f.categoryOverridden && f.manualCategory ? f.manualCategory : f.category;
-      return effectiveSentiment === 'NEGATIVE' || effectiveCategory === 'BUG';
-    }).length;
-
-    return {
-      ...stats,
-      bugs,
-      features,
-      reviews,
-      positive,
-      neutral,
-      negative,
-      needsAttention,
-    };
-  }, [feedback, stats]);
-
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'PENDING' | 'REVIEWED' | 'DONE'>(
-    'all'
-  );
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'BUG' | 'FEATURE' | 'REVIEW'>(
-    'all'
-  );
-  const [selectedSentiment, setSelectedSentiment] = useState<
-    'all' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE'
-  >('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  // Use custom hook for filtering logic
+  const {
+    filters,
+    paginatedFeedback,
+    totalPages,
+    totalFilteredItems,
+    updateFilter,
+    resetPagination,
+    clearAllFilters,
+  } = useFeedbackFilters({ feedback, itemsPerPage: 10 });
 
   // Bulk selection state
   const [selectedFeedbackIds, setSelectedFeedbackIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
-  // Advanced filtering, sorting, and pagination with useMemo for performance
-  const { paginatedFeedback, totalPages, totalFilteredItems } = useMemo(() => {
-    let filtered = feedback;
+  // Project details modal state
+  const [isProjectDetailsModalOpen, setIsProjectDetailsModalOpen] = useState(false);
 
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(f => f.status === selectedStatus);
-    }
+  const handleProjectDetails = () => {
+    setIsProjectDetailsModalOpen(true);
+  };
 
-    // Filter by category (check both AI and manual categories)
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(f => {
-        const effectiveCategory =
-          f.categoryOverridden && f.manualCategory ? f.manualCategory : f.category;
-        return effectiveCategory === selectedCategory;
+  const handleUpdateProject = async (
+    projectId: string,
+    updates: { name: string; description: string }
+  ) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
       });
-    }
 
-    // Filter by sentiment (check both AI and manual sentiment)
-    if (selectedSentiment !== 'all') {
-      filtered = filtered.filter(f => {
-        const effectiveSentiment =
-          f.sentimentOverridden && f.manualSentiment ? f.manualSentiment : f.sentiment;
-        return effectiveSentiment === selectedSentiment;
+      if (response.ok) {
+        // Refresh the page to show updated data
+        window.location.reload();
+      } else {
+        throw new Error('Failed to update project');
+      }
+    } catch (error) {
+      console.error('Error updating project:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (response.ok) {
+        // Redirect to dashboard after successful deletion
+        window.location.href = '/dashboard';
+      } else {
+        throw new Error('Failed to delete project');
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      throw error;
     }
-
-    // Filter by search query (search in content and email)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        f =>
-          f.content.toLowerCase().includes(query) ||
-          (f.email && f.email.toLowerCase().includes(query)) ||
-          (f.notes && f.notes.toLowerCase().includes(query))
-      );
-    }
-
-    // Sort by date
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
-    });
-
-    // Calculate pagination
-    const totalFilteredItems = filtered.length;
-    const totalPages = Math.ceil(totalFilteredItems / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedFeedback = filtered.slice(startIndex, endIndex);
-
-    return {
-      paginatedFeedback,
-      totalPages,
-      totalFilteredItems,
-    };
-  }, [
-    feedback,
-    selectedStatus,
-    selectedCategory,
-    selectedSentiment,
-    searchQuery,
-    sortOrder,
-    currentPage,
-    itemsPerPage,
-  ]);
-
-  // Reset to first page when filters change
-  const resetPagination = () => {
-    setCurrentPage(1);
   };
 
   // Bulk selection functions
@@ -249,7 +189,7 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
       <DashboardHeader user={user} />
 
       <main className="container mx-auto py-8">
-        <ProjectHeader project={project} />
+        <ProjectHeader project={project} onProjectDetails={handleProjectDetails} />
 
         <ProjectStats stats={enhancedStats} />
 
@@ -264,83 +204,43 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
           <CardContent>
             {/* Basic Search and Sort */}
             <FeedbackFilters
-              searchQuery={searchQuery}
-              sortOrder={sortOrder}
+              searchQuery={filters.searchQuery}
+              sortOrder={filters.sortOrder}
               onSearchChange={query => {
-                setSearchQuery(query);
+                updateFilter('searchQuery', query);
                 resetPagination();
               }}
-              onSortChange={setSortOrder}
-              onClearFilters={() => {
-                setSearchQuery('');
-                setSelectedStatus('all');
-                setSelectedCategory('all');
-                setSelectedSentiment('all');
-                setSortOrder('newest');
-                resetPagination();
-              }}
+              onSortChange={order => updateFilter('sortOrder', order)}
+              onClearFilters={clearAllFilters}
             />
 
             {/* AI Analysis Filter Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-6">
               {/* Category Filter Card */}
               <CategoryFilterCard
-                selectedCategory={selectedCategory}
+                selectedCategory={filters.selectedCategory}
                 onCategoryChange={category => {
-                  setSelectedCategory(category);
+                  updateFilter('selectedCategory', category);
                   resetPagination();
                 }}
-                categoryCounts={{
-                  BUG: feedback.filter(
-                    f =>
-                      f.category === 'BUG' || (f.categoryOverridden && f.manualCategory === 'BUG')
-                  ).length,
-                  FEATURE: feedback.filter(
-                    f =>
-                      f.category === 'FEATURE' ||
-                      (f.categoryOverridden && f.manualCategory === 'FEATURE')
-                  ).length,
-                  REVIEW: feedback.filter(
-                    f =>
-                      f.category === 'REVIEW' ||
-                      (f.categoryOverridden && f.manualCategory === 'REVIEW')
-                  ).length,
-                  uncategorized: feedback.filter(f => !f.category && !f.manualCategory).length,
-                }}
+                categoryCounts={calculateCategoryCounts(feedback)}
               />
 
               {/* Sentiment Filter Card */}
               <SentimentFilterCard
-                selectedSentiment={selectedSentiment}
+                selectedSentiment={filters.selectedSentiment}
                 onSentimentChange={sentiment => {
-                  setSelectedSentiment(sentiment);
+                  updateFilter('selectedSentiment', sentiment);
                   resetPagination();
                 }}
-                sentimentCounts={{
-                  POSITIVE: feedback.filter(
-                    f =>
-                      f.sentiment === 'POSITIVE' ||
-                      (f.sentimentOverridden && f.manualSentiment === 'POSITIVE')
-                  ).length,
-                  NEUTRAL: feedback.filter(
-                    f =>
-                      f.sentiment === 'NEUTRAL' ||
-                      (f.sentimentOverridden && f.manualSentiment === 'NEUTRAL')
-                  ).length,
-                  NEGATIVE: feedback.filter(
-                    f =>
-                      f.sentiment === 'NEGATIVE' ||
-                      (f.sentimentOverridden && f.manualSentiment === 'NEGATIVE')
-                  ).length,
-                  uncategorized: feedback.filter(f => !f.sentiment && !f.manualSentiment).length,
-                }}
+                sentimentCounts={calculateSentimentCounts(feedback)}
               />
             </div>
 
             <Tabs
-              value={selectedStatus}
+              value={filters.selectedStatus}
               onValueChange={value => {
-                setSelectedStatus(value as any);
+                updateFilter('selectedStatus', value as any);
                 resetPagination();
               }}
             >
@@ -351,19 +251,19 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
                 <TabsTrigger value="DONE">Done ({stats.done})</TabsTrigger>
               </TabsList>
 
-              <TabsContent value={selectedStatus} className="mt-6">
+              <TabsContent value={filters.selectedStatus} className="mt-6">
                 {/* Results info and pagination info */}
                 {totalFilteredItems > 0 && (
                   <div className="flex justify-between items-center mb-4 text-sm text-muted-foreground">
                     <span>
-                      Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-                      {Math.min(currentPage * itemsPerPage, totalFilteredItems)} of{' '}
+                      Showing {(filters.currentPage - 1) * 10 + 1} to{' '}
+                      {Math.min(filters.currentPage * 10, totalFilteredItems)} of{' '}
                       {totalFilteredItems} results
-                      {searchQuery && ` for "${searchQuery}"`}
+                      {filters.searchQuery && ` for "${filters.searchQuery}"`}
                     </span>
                     {totalPages > 1 && (
                       <span>
-                        Page {currentPage} of {totalPages}
+                        Page {filters.currentPage} of {totalPages}
                       </span>
                     )}
                   </div>
@@ -376,76 +276,22 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
                     <p className="text-muted-foreground">
                       {feedback.length === 0
                         ? 'No feedback has been received for this project yet.'
-                        : searchQuery
-                          ? `No feedback matching "${searchQuery}" found.`
-                          : selectedStatus === 'all'
+                        : filters.searchQuery
+                          ? `No feedback matching "${filters.searchQuery}" found.`
+                          : filters.selectedStatus === 'all'
                             ? 'No feedback matches the current filters.'
-                            : `No ${selectedStatus.toLowerCase()} feedback found.`}
+                            : `No ${filters.selectedStatus.toLowerCase()} feedback found.`}
                     </p>
                   </div>
                 ) : (
                   <>
                     {/* Bulk Actions Bar */}
-                    {paginatedFeedback.length > 0 && (
-                      <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg border">
-                        <div className="flex items-center space-x-4">
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={
-                                selectedFeedbackIds.size === paginatedFeedback.length &&
-                                paginatedFeedback.length > 0
-                              }
-                              onChange={handleSelectAll}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm font-medium">
-                              {selectedFeedbackIds.size === paginatedFeedback.length &&
-                              paginatedFeedback.length > 0
-                                ? 'Deselect All'
-                                : 'Select All'}
-                            </span>
-                          </label>
-
-                          {selectedFeedbackIds.size > 0 && (
-                            <span className="text-sm text-gray-600">
-                              {selectedFeedbackIds.size} item
-                              {selectedFeedbackIds.size !== 1 ? 's' : ''} selected
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Bulk Action Buttons */}
-                        {selectedFeedbackIds.size > 0 && (
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handleBulkStatusChange('PENDING')}
-                              disabled={bulkActionLoading}
-                              className="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-md hover:bg-orange-200 disabled:opacity-50"
-                            >
-                              Mark Pending
-                            </button>
-                            <button
-                              onClick={() => handleBulkStatusChange('REVIEWED')}
-                              disabled={bulkActionLoading}
-                              className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                            >
-                              Mark Reviewed
-                            </button>
-                            <button
-                              onClick={() => handleBulkStatusChange('DONE')}
-                              disabled={bulkActionLoading}
-                              className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200 disabled:opacity-50"
-                            >
-                              Mark Done
-                            </button>
-                            {bulkActionLoading && (
-                              <span className="text-sm text-gray-500">Updating...</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <BulkActionsBar
+                      totalItems={paginatedFeedback.length}
+                      selectedIds={selectedFeedbackIds}
+                      onSelectAll={handleSelectAll}
+                      onBulkStatusChange={handleBulkStatusChange}
+                    />
 
                     <div className="space-y-4">
                       {paginatedFeedback.map(item => (
@@ -468,9 +314,9 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
                     </div>
 
                     <PaginationControls
-                      currentPage={currentPage}
+                      currentPage={filters.currentPage}
                       totalPages={totalPages}
-                      onPageChange={setCurrentPage}
+                      onPageChange={page => updateFilter('currentPage', page)}
                     />
                   </>
                 )}
@@ -478,6 +324,15 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Project Details Modal */}
+        <ProjectDetailsModal
+          project={project}
+          isOpen={isProjectDetailsModalOpen}
+          onClose={() => setIsProjectDetailsModalOpen(false)}
+          onUpdate={handleUpdateProject}
+          onDelete={handleDeleteProject}
+        />
       </main>
     </div>
   );

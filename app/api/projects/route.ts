@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, url } = validationResult.data;
+    const { name, url, description } = validationResult.data;
 
     // Sanitize inputs to prevent XSS and other attacks
     const sanitizedName = sanitizeProjectName(name);
@@ -168,12 +168,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the project with default customization
+    // Try to scrape and analyze the website for enhanced project data
+    let enhancedData = {
+      description: undefined as string | undefined,
+      logoUrl: undefined as string | undefined,
+      ogImageUrl: undefined as string | undefined,
+      scrapedMetadata: undefined as any,
+      aiGenerated: false,
+      lastAnalyzedAt: undefined as Date | undefined,
+    };
+
+    try {
+      console.log('Attempting to scrape website for enhanced project data:', sanitizedUrl);
+
+      // Call our enhanced scrape endpoint
+      const scrapeResponse = await fetch(
+        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/scrape`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: sanitizedUrl }),
+        }
+      );
+
+      if (scrapeResponse.ok) {
+        const scrapeResult = await scrapeResponse.json();
+
+        if (scrapeResult.success && scrapeResult.data) {
+          enhancedData = {
+            description: scrapeResult.data.aiDescription || scrapeResult.data.description,
+            logoUrl: scrapeResult.data.logoUrl,
+            ogImageUrl: scrapeResult.data.ogImageUrl,
+            scrapedMetadata: scrapeResult.data.metadata,
+            aiGenerated: !!scrapeResult.data.aiDescription,
+            lastAnalyzedAt: new Date(),
+          };
+          console.log('Website analysis successful, enhanced data extracted');
+        } else {
+          console.log('Website analysis failed:', scrapeResult.error);
+        }
+      } else {
+        console.log('Scrape endpoint returned error status:', scrapeResponse.status);
+      }
+    } catch (scrapeError) {
+      console.error('Error during website analysis:', scrapeError);
+      // Continue with project creation even if scraping fails
+    }
+
+    // Create the project with enhanced data and default customization
     const project = await prisma.project.create({
       data: {
         name: sanitizedName,
         url: sanitizedUrl,
         userId: session.user.id,
+        description: description || enhancedData.description, // User description takes priority
+        logoUrl: enhancedData.logoUrl,
+        ogImageUrl: enhancedData.ogImageUrl,
+        scrapedMetadata: enhancedData.scrapedMetadata,
+        aiGenerated: !description && enhancedData.aiGenerated, // Only AI-generated if user didn't provide description
+        lastAnalyzedAt: enhancedData.lastAnalyzedAt,
         customization: {
           create: {
             buttonColor: '#3b82f6',

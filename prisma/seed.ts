@@ -29,6 +29,12 @@ async function main() {
       id: 'test-project-id',
       name: 'My Awesome App',
       url: 'https://myawesomeapp.com',
+      description:
+        'A comprehensive feedback collection platform that helps businesses gather, manage, and act on user feedback with AI-powered insights.',
+      logoUrl: 'https://myawesomeapp.com/favicon.ico',
+      ogImageUrl: 'https://myawesomeapp.com/og-image.jpg',
+      aiGenerated: true,
+      lastAnalyzedAt: new Date(),
       userId: user.id,
       createdAt: new Date(),
       updatedAt: new Date(),

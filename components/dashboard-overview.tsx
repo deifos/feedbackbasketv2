@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, MessageSquare, Settings, ExternalLink, AlertCircle } from 'lucide-react';
+import { Plus, MessageSquare, Settings, ExternalLink, AlertCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProjectWithCounts } from '@/lib/types/api';
+import { ProjectDetailsModal } from '@/components/project-details-modal';
 
 interface DashboardData {
   projects: ProjectWithCounts[];
@@ -23,6 +25,59 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ data }: DashboardOverviewProps) {
   const { projects, stats } = data;
+  const [selectedProject, setSelectedProject] = useState<ProjectWithCounts | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleProjectDetails = (project: ProjectWithCounts) => {
+    setSelectedProject(project);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateProject = async (
+    projectId: string,
+    updates: { name: string; description: string }
+  ) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        // Refresh the page to show updated data
+        window.location.reload();
+      } else {
+        throw new Error('Failed to update project');
+      }
+    } catch (error) {
+      console.error('Error updating project:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Redirect to dashboard after successful deletion
+        window.location.href = '/dashboard';
+      } else {
+        throw new Error('Failed to delete project');
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      throw error;
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -116,11 +171,41 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map(project => (
-              <Card key={project.id} className="relative">
-                <CardHeader>
+              <Card key={project.id} className="relative overflow-hidden">
+                {/* Background Image */}
+                {project.ogImageUrl && (
+                  <div className="absolute inset-0 z-0">
+                    <img
+                      src={project.ogImageUrl}
+                      alt={`${project.name} preview`}
+                      className="w-full h-full object-cover opacity-5"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/90" />
+                  </div>
+                )}
+
+                <CardHeader className="relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
+                      <div className="flex items-center gap-2 mb-1">
+                        {project.logoUrl && (
+                          <img
+                            src={project.logoUrl}
+                            alt={`${project.name} logo`}
+                            className="w-6 h-6 object-contain"
+                          />
+                        )}
+                        <CardTitle className="text-lg">{project.name}</CardTitle>
+                        {project.aiGenerated && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                          >
+                            AI Enhanced
+                          </Badge>
+                        )}
+                      </div>
+
                       <CardDescription className="flex items-center mt-1">
                         <ExternalLink className="w-3 h-3 mr-1" />
                         <a
@@ -136,7 +221,7 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
                   </div>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="relative z-10">
                   <div className="space-y-4">
                     {/* Feedback Stats */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -175,6 +260,13 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
                           View Feedback
                         </Button>
                       </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleProjectDetails(project)}
+                      >
+                        <Info className="w-4 h-4" />
+                      </Button>
                       <Link href={`/dashboard/projects/${project.id}/customize`}>
                         <Button variant="outline" size="sm">
                           <Settings className="w-4 h-4" />
@@ -204,6 +296,20 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
           </div>
         )}
       </div>
+
+      {/* Project Details Modal */}
+      {selectedProject && (
+        <ProjectDetailsModal
+          project={selectedProject}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedProject(null);
+          }}
+          onUpdate={handleUpdateProject}
+          onDelete={handleDeleteProject}
+        />
+      )}
     </div>
   );
 }

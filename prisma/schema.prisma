@@ -85,12 +85,21 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // AI-enhanced project metadata
+  description      String?  // AI-generated or manual description
+  logoUrl          String?  // Favicon or brand logo URL
+  ogImageUrl       String?  // OpenGraph image URL for backgrounds
+  scrapedMetadata  Json?    // Raw scraped metadata from Firecrawl
+  aiGenerated      Boolean  @default(false) // Whether description is AI-generated
+  lastAnalyzedAt   DateTime? // When last analyzed with AI
+
   customization ProjectCustomization?
   feedback      Feedback[]
 
   // Performance indexes
   @@index([userId])
   @@index([userId, updatedAt])
+  @@index([aiGenerated]) // For filtering AI vs manual projects
   @@map("project")
 }
 
