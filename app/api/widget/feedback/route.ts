@@ -1,65 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/app/generated/prisma';
 import { FeedbackSubmissionRequest, FeedbackSubmissionResponse } from '@/lib/types/api';
+import { feedbackSchema } from '@/lib/validation';
+import { sanitizeFeedbackContent, sanitizeEmail } from '@/lib/sanitization';
+import { rateLimitFeedback } from '@/lib/rate-limit';
 
 const prisma = new PrismaClient();
 
 // POST /api/widget/feedback - Submit feedback (public endpoint)
 export async function POST(request: NextRequest) {
   try {
-    // Parse and validate request body
+    // Apply rate limiting first
+    const rateLimitResult = rateLimitFeedback(request);
+    if (!rateLimitResult.isAllowed) {
+      return NextResponse.json(
+        {
+          error: 'Rate Limit Exceeded',
+          message: 'Too many feedback submissions. Please try again later.',
+          resetTime: rateLimitResult.resetTime,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': '5',
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
+          },
+        }
+      );
+    }
+
+    // Parse request body
     const body = await request.json();
-    const { projectId, content, email } = body;
 
-    // Validate required fields
-    if (!projectId || typeof projectId !== 'string') {
+    // Validate input using Zod schema
+    const validationResult = feedbackSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message,
+      }));
+
       return NextResponse.json(
-        { error: 'Validation Error', message: 'Project ID is required and must be a string' },
+        {
+          error: 'Validation Error',
+          message: 'Invalid input data',
+          details: errors,
+        },
         { status: 400 }
       );
     }
 
-    if (!content || typeof content !== 'string') {
+    const { projectId, content, email } = validationResult.data;
+
+    // Sanitize inputs to prevent XSS and other attacks
+    const sanitizedContent = sanitizeFeedbackContent(content);
+    const sanitizedEmail = email ? sanitizeEmail(email) : null;
+
+    // Double-check sanitized content isn't empty after sanitization
+    if (!sanitizedContent || sanitizedContent.length === 0) {
       return NextResponse.json(
-        { error: 'Validation Error', message: 'Feedback content is required and must be a string' },
+        {
+          error: 'Validation Error',
+          message: 'Feedback content cannot be empty after sanitization',
+        },
         { status: 400 }
       );
-    }
-
-    // Validate and sanitize inputs
-    const sanitizedContent = content.trim();
-    const sanitizedEmail = email && typeof email === 'string' ? email.trim() : null;
-
-    if (sanitizedContent.length === 0) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Feedback content cannot be empty' },
-        { status: 400 }
-      );
-    }
-
-    if (sanitizedContent.length > 5000) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Feedback content must be 5000 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format if provided
-    if (sanitizedEmail) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(sanitizedEmail)) {
-        return NextResponse.json(
-          { error: 'Validation Error', message: 'Please provide a valid email address' },
-          { status: 400 }
-        );
-      }
-
-      if (sanitizedEmail.length > 254) {
-        return NextResponse.json(
-          { error: 'Validation Error', message: 'Email address is too long' },
-          { status: 400 }
-        );
-      }
     }
 
     // Verify that the project exists
@@ -81,29 +87,6 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get('x-real-ip');
     const ipAddress = forwarded?.split(',')[0] || realIp || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
-
-    // Rate limiting check - prevent spam from same IP
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentFeedbackCount = await prisma.feedback.count({
-      where: {
-        projectId: projectId,
-        ipAddress: ipAddress,
-        createdAt: {
-          gte: oneHourAgo,
-        },
-      },
-    });
-
-    // Allow max 10 feedback submissions per IP per hour
-    if (recentFeedbackCount >= 10) {
-      return NextResponse.json(
-        {
-          error: 'Rate Limit Exceeded',
-          message: 'Too many feedback submissions. Please try again later.',
-        },
-        { status: 429 }
-      );
-    }
 
     // Create the feedback record
     const feedback = await prisma.feedback.create({

@@ -345,10 +345,34 @@
       const contentInput = document.getElementById('feedback-content');
       const emailInput = document.getElementById('feedback-email');
 
-      if (!contentInput.value.trim()) {
-        contentInput.focus();
+      // Enhanced client-side validation
+      const content = contentInput.value.trim();
+      const email = emailInput.value.trim();
+
+      // Validate content
+      if (!content) {
+        this.showValidationError(contentInput, 'Feedback content is required');
         return;
       }
+
+      if (content.length > 2000) {
+        this.showValidationError(contentInput, 'Feedback must be less than 2000 characters');
+        return;
+      }
+
+      // Validate email if provided
+      if (email && !this.isValidEmail(email)) {
+        this.showValidationError(emailInput, 'Please enter a valid email address');
+        return;
+      }
+
+      if (email && email.length > 254) {
+        this.showValidationError(emailInput, 'Email address is too long');
+        return;
+      }
+
+      // Clear any existing validation errors
+      this.clearValidationErrors();
 
       const originalText = submitBtn.textContent;
       submitBtn.textContent = 'Sending...';
@@ -401,6 +425,63 @@
       container.appendChild(this.elements.modal);
 
       document.body.appendChild(container);
+    },
+
+    // Validation helper functions
+    isValidEmail: function (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    },
+
+    showValidationError: function (input, message) {
+      // Remove any existing error message
+      this.clearValidationError(input);
+
+      // Add error styling to input
+      input.style.borderColor = '#ef4444';
+      input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+
+      // Create and show error message
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'feedback-validation-error';
+      errorDiv.style.cssText = `
+        color: #ef4444;
+        font-size: 12px;
+        margin-top: 4px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+      errorDiv.textContent = message;
+
+      // Insert error message after the input
+      input.parentNode.insertBefore(errorDiv, input.nextSibling);
+
+      // Focus the input
+      input.focus();
+    },
+
+    clearValidationError: function (input) {
+      // Reset input styling
+      input.style.borderColor = '#d1d5db';
+      input.style.boxShadow = 'none';
+
+      // Remove error message
+      const errorDiv = input.parentNode.querySelector('.feedback-validation-error');
+      if (errorDiv) {
+        errorDiv.remove();
+      }
+    },
+
+    clearValidationErrors: function () {
+      // Clear all validation errors
+      const inputs = ['feedback-content', 'feedback-email'];
+      const self = this;
+
+      inputs.forEach(function (inputId) {
+        const input = document.getElementById(inputId);
+        if (input) {
+          self.clearValidationError(input);
+        }
+      });
     },
 
     // Destroy widget (for cleanup)

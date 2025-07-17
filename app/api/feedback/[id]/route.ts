@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { PrismaClient } from '@/app/generated/prisma';
+import { feedbackUpdateSchema } from '@/lib/validation';
+import { sanitizeNotes } from '@/lib/sanitization';
 
 const prisma = new PrismaClient();
 
@@ -23,28 +25,28 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     const { id } = params;
 
-    // Parse and validate request body
+    // Parse request body
     const body = await request.json();
-    const { status, notes } = body;
 
-    // Validate status if provided
-    if (status && !['PENDING', 'REVIEWED', 'DONE'].includes(status)) {
+    // Validate input using Zod schema
+    const validationResult = feedbackUpdateSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message,
+      }));
+
       return NextResponse.json(
         {
           error: 'Validation Error',
-          message: 'Invalid status. Must be PENDING, REVIEWED, or DONE',
+          message: 'Invalid input data',
+          details: errors,
         },
         { status: 400 }
       );
     }
 
-    // Validate notes if provided
-    if (notes !== undefined && typeof notes !== 'string') {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Notes must be a string' },
-        { status: 400 }
-      );
-    }
+    const { status, notes } = validationResult.data;
 
     // Check if feedback exists and user owns the project
     const feedback = await prisma.feedback.findFirst({
@@ -66,10 +68,13 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       );
     }
 
-    // Prepare update data
+    // Prepare update data with sanitization
     const updateData: any = {};
     if (status !== undefined) updateData.status = status;
-    if (notes !== undefined) updateData.notes = notes.trim() || null;
+    if (notes !== undefined) {
+      const sanitizedNotes = sanitizeNotes(notes);
+      updateData.notes = sanitizedNotes || null;
+    }
 
     // Update the feedback
     const updatedFeedback = await prisma.feedback.update({
