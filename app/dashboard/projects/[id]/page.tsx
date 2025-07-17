@@ -65,11 +65,53 @@ export default async function ProjectPage(props: ProjectPageProps) {
 
   // Transform stats into the expected format
   const statsMap = new Map(feedbackStats.map(stat => [stat.status, stat._count.id]));
+
+  // Calculate AI analysis statistics from recent feedback
+  const categoryStats = recentFeedback.reduce(
+    (acc, feedback) => {
+      const effectiveCategory =
+        feedback.categoryOverridden && feedback.manualCategory
+          ? feedback.manualCategory
+          : feedback.category;
+
+      if (effectiveCategory === 'BUG') acc.bugs++;
+      else if (effectiveCategory === 'FEATURE') acc.features++;
+      else if (effectiveCategory === 'REVIEW') acc.reviews++;
+
+      return acc;
+    },
+    { bugs: 0, features: 0, reviews: 0 }
+  );
+
+  const sentimentStats = recentFeedback.reduce(
+    (acc, feedback) => {
+      const effectiveSentiment =
+        feedback.sentimentOverridden && feedback.manualSentiment
+          ? feedback.manualSentiment
+          : feedback.sentiment;
+
+      if (effectiveSentiment === 'POSITIVE') acc.positive++;
+      else if (effectiveSentiment === 'NEUTRAL') acc.neutral++;
+      else if (effectiveSentiment === 'NEGATIVE') acc.negative++;
+
+      return acc;
+    },
+    { positive: 0, neutral: 0, negative: 0 }
+  );
+
   const stats = {
     total: feedbackStats.reduce((sum, stat) => sum + stat._count.id, 0),
     pending: statsMap.get('PENDING') || 0,
     reviewed: statsMap.get('REVIEWED') || 0,
     done: statsMap.get('DONE') || 0,
+    // AI Analysis stats
+    bugs: categoryStats.bugs,
+    features: categoryStats.features,
+    reviews: categoryStats.reviews,
+    positive: sentimentStats.positive,
+    neutral: sentimentStats.neutral,
+    negative: sentimentStats.negative,
+    needsAttention: categoryStats.bugs + sentimentStats.negative, // Items that need immediate attention
   };
 
   // Add feedback to project object for compatibility

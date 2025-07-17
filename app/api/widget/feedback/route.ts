@@ -3,6 +3,7 @@ import { PrismaClient } from '@/app/generated/prisma';
 import { feedbackSchema } from '@/lib/validation';
 import { sanitizeFeedbackContent, sanitizeEmail } from '@/lib/sanitization';
 import { rateLimitFeedback } from '@/lib/rate-limit';
+import { analyzeFeedbackWithAI } from '@/lib/ai-analysis';
 
 const prisma = new PrismaClient();
 
@@ -87,7 +88,16 @@ export async function POST(request: NextRequest) {
     const ipAddress = forwarded?.split(',')[0] || realIp || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
-    // Create the feedback record
+    // Perform AI analysis of the feedback content
+    let aiAnalysis = null;
+    try {
+      aiAnalysis = await analyzeFeedbackWithAI(sanitizedContent);
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      // Continue without AI analysis if it fails
+    }
+
+    // Create the feedback record with AI analysis
     const feedback = await prisma.feedback.create({
       data: {
         projectId: projectId,
@@ -96,11 +106,22 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
         ipAddress: ipAddress,
         userAgent: userAgent,
+        // Add AI analysis results if available
+        ...(aiAnalysis && {
+          category: aiAnalysis.category,
+          sentiment: aiAnalysis.sentiment,
+          categoryConfidence: aiAnalysis.categoryConfidence,
+          sentimentConfidence: aiAnalysis.sentimentConfidence,
+          isAiAnalyzed: true,
+          aiAnalyzedAt: new Date(),
+        }),
       },
       select: {
         id: true,
         createdAt: true,
         status: true,
+        category: true,
+        sentiment: true,
       },
     });
 
@@ -113,6 +134,8 @@ export async function POST(request: NextRequest) {
           id: feedback.id,
           status: feedback.status,
           submittedAt: feedback.createdAt,
+          category: feedback.category,
+          sentiment: feedback.sentiment,
         },
       },
       { status: 201 }

@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 interface FeedbackFiltersProps {
   searchQuery: string;
   sortOrder: 'newest' | 'oldest';
-  selectedStatus: 'all' | 'PENDING' | 'REVIEWED' | 'DONE';
   onSearchChange: (query: string) => void;
   onSortChange: (order: 'newest' | 'oldest') => void;
   onClearFilters: () => void;
@@ -14,12 +13,11 @@ interface FeedbackFiltersProps {
 export function FeedbackFilters({
   searchQuery,
   sortOrder,
-  selectedStatus,
   onSearchChange,
   onSortChange,
   onClearFilters,
 }: FeedbackFiltersProps) {
-  const hasActiveFilters = searchQuery || selectedStatus !== 'all' || sortOrder !== 'newest';
+  const hasActiveFilters = searchQuery || sortOrder !== 'newest';
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">

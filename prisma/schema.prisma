@@ -121,6 +121,20 @@ model Feedback {
   status    FeedbackStatus @default(PENDING)
   notes     String?
 
+  // AI-powered analysis fields
+  category          FeedbackCategory? // AI-assigned category
+  sentiment         Sentiment?        // AI-assigned sentiment
+  categoryConfidence Float?           // AI confidence score (0-1)
+  sentimentConfidence Float?          // AI confidence score (0-1)
+  isAiAnalyzed      Boolean @default(false) // Whether AI analysis has been performed
+  aiAnalyzedAt      DateTime?         // When AI analysis was performed
+  
+  // Manual override fields (user can override AI)
+  manualCategory    FeedbackCategory? // User-assigned category override
+  manualSentiment   Sentiment?        // User-assigned sentiment override
+  categoryOverridden Boolean @default(false) // Whether user overrode AI category
+  sentimentOverridden Boolean @default(false) // Whether user overrode AI sentiment
+
   ipAddress String?
   userAgent String?
 
@@ -134,6 +148,11 @@ model Feedback {
   @@index([projectId, createdAt])
   @@index([createdAt])
   @@index([ipAddress, createdAt]) // For rate limiting queries
+  @@index([category]) // For category filtering
+  @@index([sentiment]) // For sentiment filtering
+  @@index([projectId, category]) // For project category analysis
+  @@index([projectId, sentiment]) // For project sentiment analysis
+  @@index([projectId, createdAt, category]) // For trend analysis
   @@map("feedback")
 }
 
@@ -141,4 +160,16 @@ enum FeedbackStatus {
   PENDING
   REVIEWED
   DONE
+}
+
+enum FeedbackCategory {
+  BUG
+  FEATURE
+  REVIEW
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
 }

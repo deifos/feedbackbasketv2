@@ -1,9 +1,28 @@
 import { useState } from 'react';
-import { Calendar, Mail, Edit3, Check, X } from 'lucide-react';
+import {
+  Calendar,
+  Mail,
+  Edit3,
+  Check,
+  X,
+  Bug,
+  Sparkles,
+  Star,
+  HelpCircle,
+  Smile,
+  Frown,
+  Meh,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Feedback } from '@/app/generated/prisma';
+import {
+  getEffectiveCategory,
+  getEffectiveSentiment,
+  getCategoryInfo,
+  getSentimentInfo,
+} from '@/lib/ai-analysis';
 
 interface FeedbackItemProps {
   feedback: Feedback;
@@ -46,11 +65,32 @@ export function FeedbackItem({
     setEditingNotes(false);
   };
 
+  const getIconComponent = (iconName: string, className = 'h-3 w-3') => {
+    switch (iconName) {
+      case 'Bug':
+        return <Bug className={className} />;
+      case 'Sparkles':
+        return <Sparkles className={className} />;
+      case 'Star':
+        return <Star className={className} />;
+      case 'Smile':
+        return <Smile className={className} />;
+      case 'Frown':
+        return <Frown className={className} />;
+      case 'Meh':
+        return <Meh className={className} />;
+      case 'HelpCircle':
+        return <HelpCircle className={className} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <Card className={`relative ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
             {/* Selection Checkbox */}
             {onSelect && (
               <input
@@ -61,6 +101,32 @@ export function FeedbackItem({
               />
             )}
             <Badge className={getStatusColor(feedback.status)}>{feedback.status}</Badge>
+
+            {/* Category and Sentiment Badges */}
+            {(() => {
+              const effectiveCategory = getEffectiveCategory(feedback);
+              const effectiveSentiment = getEffectiveSentiment(feedback);
+              const categoryInfo = getCategoryInfo(effectiveCategory);
+              const sentimentInfo = getSentimentInfo(effectiveSentiment);
+
+              return (
+                <>
+                  {effectiveCategory && (
+                    <Badge className={`${categoryInfo.color} text-xs flex items-center gap-1`}>
+                      {getIconComponent(categoryInfo.icon)}
+                      {categoryInfo.label}
+                    </Badge>
+                  )}
+                  {effectiveSentiment && (
+                    <Badge className={`${sentimentInfo.color} text-xs flex items-center gap-1`}>
+                      {getIconComponent(sentimentInfo.icon)}
+                      {sentimentInfo.label}
+                    </Badge>
+                  )}
+                </>
+              );
+            })()}
+
             <div className="flex items-center text-sm text-muted-foreground">
               <Calendar className="w-4 h-4 mr-1" />
               {new Date(feedback.createdAt).toLocaleDateString()} at{' '}

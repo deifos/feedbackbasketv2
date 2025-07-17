@@ -10,6 +10,8 @@ import { ProjectStats } from '@/components/project-stats';
 import { FeedbackFilters } from '@/components/feedback-filters';
 import { FeedbackItem } from '@/components/feedback-item';
 import { PaginationControls } from '@/components/pagination-controls';
+import { CategoryFilterCard } from '@/components/category-filter-card';
+import { SentimentFilterCard } from '@/components/sentiment-filter-card';
 import { Project, ProjectCustomization, Feedback } from '@/app/generated/prisma';
 
 interface ProjectDashboardProps {
@@ -32,12 +34,65 @@ interface ProjectDashboardProps {
 }
 
 export function ProjectDashboard({ project, feedback, stats, user }: ProjectDashboardProps) {
+  // Calculate additional stats for AI analysis
+  const enhancedStats = useMemo(() => {
+    const bugs = feedback.filter(
+      f => f.category === 'BUG' || (f.categoryOverridden && f.manualCategory === 'BUG')
+    ).length;
+
+    const features = feedback.filter(
+      f => f.category === 'FEATURE' || (f.categoryOverridden && f.manualCategory === 'FEATURE')
+    ).length;
+
+    const reviews = feedback.filter(
+      f => f.category === 'REVIEW' || (f.categoryOverridden && f.manualCategory === 'REVIEW')
+    ).length;
+
+    const positive = feedback.filter(
+      f => f.sentiment === 'POSITIVE' || (f.sentimentOverridden && f.manualSentiment === 'POSITIVE')
+    ).length;
+
+    const neutral = feedback.filter(
+      f => f.sentiment === 'NEUTRAL' || (f.sentimentOverridden && f.manualSentiment === 'NEUTRAL')
+    ).length;
+
+    const negative = feedback.filter(
+      f => f.sentiment === 'NEGATIVE' || (f.sentimentOverridden && f.manualSentiment === 'NEGATIVE')
+    ).length;
+
+    // Calculate items that need attention (negative sentiment + bugs)
+    const needsAttention = feedback.filter(f => {
+      const effectiveSentiment =
+        f.sentimentOverridden && f.manualSentiment ? f.manualSentiment : f.sentiment;
+      const effectiveCategory =
+        f.categoryOverridden && f.manualCategory ? f.manualCategory : f.category;
+      return effectiveSentiment === 'NEGATIVE' || effectiveCategory === 'BUG';
+    }).length;
+
+    return {
+      ...stats,
+      bugs,
+      features,
+      reviews,
+      positive,
+      neutral,
+      negative,
+      needsAttention,
+    };
+  }, [feedback, stats]);
+
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'PENDING' | 'REVIEWED' | 'DONE'>(
     'all'
   );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'BUG' | 'FEATURE' | 'REVIEW'>(
+    'all'
+  );
+  const [selectedSentiment, setSelectedSentiment] = useState<
+    'all' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE'
+  >('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -52,6 +107,24 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
     // Filter by status
     if (selectedStatus !== 'all') {
       filtered = filtered.filter(f => f.status === selectedStatus);
+    }
+
+    // Filter by category (check both AI and manual categories)
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(f => {
+        const effectiveCategory =
+          f.categoryOverridden && f.manualCategory ? f.manualCategory : f.category;
+        return effectiveCategory === selectedCategory;
+      });
+    }
+
+    // Filter by sentiment (check both AI and manual sentiment)
+    if (selectedSentiment !== 'all') {
+      filtered = filtered.filter(f => {
+        const effectiveSentiment =
+          f.sentimentOverridden && f.manualSentiment ? f.manualSentiment : f.sentiment;
+        return effectiveSentiment === selectedSentiment;
+      });
     }
 
     // Filter by search query (search in content and email)
@@ -84,7 +157,16 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
       totalPages,
       totalFilteredItems,
     };
-  }, [feedback, selectedStatus, searchQuery, sortOrder, currentPage, itemsPerPage]);
+  }, [
+    feedback,
+    selectedStatus,
+    selectedCategory,
+    selectedSentiment,
+    searchQuery,
+    sortOrder,
+    currentPage,
+    itemsPerPage,
+  ]);
 
   // Reset to first page when filters change
   const resetPagination = () => {
@@ -169,7 +251,7 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
       <main className="container mx-auto py-8">
         <ProjectHeader project={project} />
 
-        <ProjectStats stats={stats} />
+        <ProjectStats stats={enhancedStats} />
 
         {/* Feedback Management */}
         <Card>
@@ -180,10 +262,10 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Basic Search and Sort */}
             <FeedbackFilters
               searchQuery={searchQuery}
               sortOrder={sortOrder}
-              selectedStatus={selectedStatus}
               onSearchChange={query => {
                 setSearchQuery(query);
                 resetPagination();
@@ -192,10 +274,68 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
               onClearFilters={() => {
                 setSearchQuery('');
                 setSelectedStatus('all');
+                setSelectedCategory('all');
+                setSelectedSentiment('all');
                 setSortOrder('newest');
                 resetPagination();
               }}
             />
+
+            {/* AI Analysis Filter Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-6">
+              {/* Category Filter Card */}
+              <CategoryFilterCard
+                selectedCategory={selectedCategory}
+                onCategoryChange={category => {
+                  setSelectedCategory(category);
+                  resetPagination();
+                }}
+                categoryCounts={{
+                  BUG: feedback.filter(
+                    f =>
+                      f.category === 'BUG' || (f.categoryOverridden && f.manualCategory === 'BUG')
+                  ).length,
+                  FEATURE: feedback.filter(
+                    f =>
+                      f.category === 'FEATURE' ||
+                      (f.categoryOverridden && f.manualCategory === 'FEATURE')
+                  ).length,
+                  REVIEW: feedback.filter(
+                    f =>
+                      f.category === 'REVIEW' ||
+                      (f.categoryOverridden && f.manualCategory === 'REVIEW')
+                  ).length,
+                  uncategorized: feedback.filter(f => !f.category && !f.manualCategory).length,
+                }}
+              />
+
+              {/* Sentiment Filter Card */}
+              <SentimentFilterCard
+                selectedSentiment={selectedSentiment}
+                onSentimentChange={sentiment => {
+                  setSelectedSentiment(sentiment);
+                  resetPagination();
+                }}
+                sentimentCounts={{
+                  POSITIVE: feedback.filter(
+                    f =>
+                      f.sentiment === 'POSITIVE' ||
+                      (f.sentimentOverridden && f.manualSentiment === 'POSITIVE')
+                  ).length,
+                  NEUTRAL: feedback.filter(
+                    f =>
+                      f.sentiment === 'NEUTRAL' ||
+                      (f.sentimentOverridden && f.manualSentiment === 'NEUTRAL')
+                  ).length,
+                  NEGATIVE: feedback.filter(
+                    f =>
+                      f.sentiment === 'NEGATIVE' ||
+                      (f.sentimentOverridden && f.manualSentiment === 'NEGATIVE')
+                  ).length,
+                  uncategorized: feedback.filter(f => !f.sentiment && !f.manualSentiment).length,
+                }}
+              />
+            </div>
 
             <Tabs
               value={selectedStatus}

@@ -133,11 +133,6 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
                         </a>
                       </CardDescription>
                     </div>
-                    {project._count.pendingFeedback > 0 && (
-                      <Badge variant="destructive" className="ml-2">
-                        {project._count.pendingFeedback} pending
-                      </Badge>
-                    )}
                   </div>
                 </CardHeader>
 
