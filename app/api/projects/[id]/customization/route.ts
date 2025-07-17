@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { PrismaClient } from '@/app/generated/prisma';
-import { CustomizationUpdateRequest } from '@/lib/types/api';
+// import { CustomizationUpdateRequest } from '@/lib/types/api';
 
 const prisma = new PrismaClient();
 

@@ -8,18 +8,8 @@
       "jsx": true
     }
   },
-  "extends": [
-    "next",
-    "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ],
-  "plugins": [
-    "react",
-    "react-hooks",
-    "@typescript-eslint",
-    "react-hooks-extra",
-    "@eslint-react"
-  ],
+  "extends": ["next", "plugin:@typescript-eslint/recommended", "prettier"],
+  "plugins": ["react", "react-hooks", "@typescript-eslint", "react-hooks-extra", "@eslint-react"],
   "rules": {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
@@ -27,17 +17,25 @@
     "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "error",
     "@typescript-eslint/no-empty-object-type": "warn",
     "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/no-unused-vars": "warn",
-    "react/no-unescaped-entities": "warn"
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+    "react/no-unescaped-entities": [
+      "error",
+      {
+        "forbid": ["'", "\"", ">", "}"]
+      }
+    ]
   },
   "settings": {
     "react": {
       "version": "detect"
     }
   },
-  "ignorePatterns": [
-    "app/generated/**/*",
-    "node_modules/**/*",
-    ".next/**/*"
-  ]
+  "ignorePatterns": ["app/generated/**/*", "node_modules/**/*", ".next/**/*"]
 }

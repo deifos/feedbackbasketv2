@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             <div>
               <h1 className="text-3xl font-bold">Welcome back, {session.user.name}!</h1>
               <p className="text-muted-foreground">
-                Here's what's happening with your projects feedback.
+                Here&apos;s what&apos;s happening with your projects feedback.
               </p>
             </div>
 

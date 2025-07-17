@@ -2,16 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  Copy,
-  Check,
-  Code,
-  Globe,
-  Settings,
-  ExternalLink,
-  AlertCircle,
-} from 'lucide-react';
+import { ArrowLeft, Copy, Check, Code, Settings, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -192,7 +183,7 @@ export function ScriptInstallationGuide({
                         <h4 className="font-semibold text-blue-900 mb-2">Installation Steps:</h4>
                         <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
                           <li>Copy the embed code above</li>
-                          <li>Open your website's HTML file</li>
+                          <li>Open your website&apos;s HTML file</li>
                           <li>
                             Paste the code just before the closing <code>&lt;/body&gt;</code> tag
                           </li>
@@ -291,8 +282,8 @@ export function ScriptInstallationGuide({
                   <div>
                     <h4 className="font-medium mb-2">Need help?</h4>
                     <p className="text-sm text-muted-foreground">
-                      If you're still having issues, feel free to reach out for support. Include
-                      your project ID and website URL for faster assistance.
+                      If you&apos;re still having issues, feel free to reach out for support.
+                      Include your project ID and website URL for faster assistance.
                     </p>
                   </div>
                 </div>
@@ -352,7 +343,7 @@ export function ScriptInstallationGuide({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Button Label:</span>
-                    <span>"{scriptData.buttonLabel}"</span>
+                    <span>&quot;{scriptData.buttonLabel}&quot;</span>
                   </div>
                 </div>
 

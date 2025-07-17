@@ -7,7 +7,7 @@ import { authClient } from '@/lib/auth-client';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
 
 interface AuthFormProps extends React.ComponentProps<'div'> {
   mode: 'signin' | 'signup';

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Settings, ExternalLink, Info, Edit } from 'lucide-react';
+import { ArrowLeft, Settings, ExternalLink, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Project, ProjectCustomization } from '@/app/generated/prisma';
 

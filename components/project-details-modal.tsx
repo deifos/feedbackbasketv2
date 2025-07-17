@@ -332,8 +332,8 @@ export function ProjectDetailsModal({
             <CardHeader>
               <CardTitle className="text-red-600">Delete Project</CardTitle>
               <CardDescription>
-                Are you sure you want to delete "{project.name}"? This action cannot be undone and
-                will permanently remove all feedback data.
+                Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be
+                undone and will permanently remove all feedback data.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-end gap-2">

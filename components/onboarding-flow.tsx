@@ -6,7 +6,7 @@ import { CheckCircle, ArrowRight, MessageSquare, Settings, Code, Sparkles } from
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { WidgetPreviewOnboarding } from '@/components/widget-preview-onboarding';
 
@@ -131,12 +131,12 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
             <div>
               <h2 className="text-2xl font-bold mb-2">Welcome to Feedback Basket!</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Let's get you set up with your first feedback collection project. This will only
-                take a few minutes.
+                Let&apos;s get you set up with your first feedback collection project. This will
+                only take a few minutes.
               </p>
             </div>
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2">What you'll accomplish:</h3>
+              <h3 className="font-semibold text-blue-900 mb-2">What you&apos;ll accomplish:</h3>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>✓ Create your first project</li>
                 <li>✓ Customize your feedback widget</li>
@@ -191,7 +191,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
                   required
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  The URL where you'll embed the feedback widget
+                  The URL where you&apos;ll embed the feedback widget
                 </p>
               </div>
 
@@ -218,7 +218,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
               </div>
               <h2 className="text-2xl font-bold mb-2">Customize Your Widget</h2>
               <p className="text-muted-foreground">
-                Make the feedback widget match your website's style.
+                Make the feedback widget match your website&apos;s style.
               </p>
             </div>
 
@@ -337,7 +337,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
               </div>
               <h2 className="text-2xl font-bold mb-2">Install Your Widget</h2>
               <p className="text-muted-foreground">
-                You're almost done! Just add this code to your website.
+                You&apos;re almost done! Just add this code to your website.
               </p>
             </div>
 
@@ -390,7 +390,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
                 Copy Code
               </Button>
               <Button onClick={handleCompleteOnboarding} className="flex-1">
-                I've Installed It
+                I&apos;ve Installed It
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -406,12 +406,12 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
             <div>
               <h2 className="text-2xl font-bold mb-2">Congratulations!</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                You've successfully set up your first feedback collection project. You'll be
-                redirected to your dashboard shortly.
+                You&apos;ve successfully set up your first feedback collection project. You&apos;ll
+                be redirected to your dashboard shortly.
               </p>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900 mb-2">What's Next?</h3>
+              <h3 className="font-semibold text-green-900 mb-2">What&apos;s Next?</h3>
               <ul className="text-sm text-green-800 space-y-1">
                 <li>✓ Your widget is ready to collect feedback</li>
                 <li>✓ Check your dashboard to see incoming feedback</li>

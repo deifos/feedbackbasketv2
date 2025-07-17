@@ -1,4 +1,4 @@
-import { Project, ProjectCustomization, Feedback } from '@/app/generated/prisma';
+import { Project, ProjectCustomization } from '@/app/generated/prisma';
 
 // API Response types
 export interface ApiError {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,32 +21,29 @@ export function WidgetCustomizer({
   onUpdate,
   onPreviewUpdate,
 }: WidgetCustomizerProps) {
-  const [customization, setCustomization] = useState<CustomizationUpdateRequest>({
-    buttonColor: initialCustomization?.buttonColor || '#3b82f6',
-    buttonRadius: initialCustomization?.buttonRadius || 8,
-    buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
-    introMessage:
-      initialCustomization?.introMessage ||
-      "We'd love to hear your thoughts! Your feedback helps us improve.",
-    successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
-  });
+  // Derive initial state from props using useMemo
+  const initialState = useMemo(
+    () => ({
+      buttonColor: initialCustomization?.buttonColor || '#3b82f6',
+      buttonRadius: initialCustomization?.buttonRadius || 8,
+      buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
+      introMessage:
+        initialCustomization?.introMessage ||
+        "We'd love to hear your thoughts! Your feedback helps us improve.",
+      successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
+    }),
+    [initialCustomization]
+  );
 
+  const [customization, setCustomization] = useState<CustomizationUpdateRequest>(initialState);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Update local state when initial customization changes
-  useEffect(() => {
-    if (initialCustomization) {
-      setCustomization({
-        buttonColor: initialCustomization.buttonColor,
-        buttonRadius: initialCustomization.buttonRadius,
-        buttonLabel: initialCustomization.buttonLabel,
-        introMessage: initialCustomization.introMessage,
-        successMessage: initialCustomization.successMessage,
-      });
-    }
-  }, [initialCustomization]);
+  // Update state when initialState changes (when initialCustomization prop changes)
+  if (JSON.stringify(customization) !== JSON.stringify(initialState)) {
+    setCustomization(initialState);
+  }
 
   const handleInputChange = (field: keyof CustomizationUpdateRequest, value: string | number) => {
     setCustomization(prev => ({

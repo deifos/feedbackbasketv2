@@ -93,8 +93,8 @@ export function WidgetCustomizationPage({
         <div className="mt-12 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">Next Steps</h3>
           <p className="text-blue-800 mb-4">
-            Once you're happy with your widget customization, you can generate the embed code and
-            add it to your website.
+            Once you&apos;re happy with your widget customization, you can generate the embed code
+            and add it to your website.
           </p>
           <Link href={`/dashboard/projects/${project.id}/install`}>
             <Button className="bg-blue-600 hover:bg-blue-700">Get Embed Code</Button>

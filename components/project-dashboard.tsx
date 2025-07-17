@@ -58,7 +58,7 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
 
   // Bulk selection state
   const [selectedFeedbackIds, setSelectedFeedbackIds] = useState<Set<string>>(new Set());
-  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [_bulkActionLoading, setBulkActionLoading] = useState(false);
 
   // Project details modal state
   const [isProjectDetailsModalOpen, setIsProjectDetailsModalOpen] = useState(false);

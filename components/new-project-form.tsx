@@ -191,8 +191,8 @@ export function NewProjectForm({ user }: NewProjectFormProps) {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    The URL where you'll embed the feedback widget. Click "Analyze" to auto-generate
-                    project details.
+                    The URL where you&apos;ll embed the feedback widget. Click &quot;Analyze&quot;
+                    to auto-generate project details.
                   </p>
                 </div>
 
@@ -316,7 +316,7 @@ export function NewProjectForm({ user }: NewProjectFormProps) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>You'll be taken to customize your feedback widget</span>
+                    <span>You&apos;ll be taken to customize your feedback widget</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

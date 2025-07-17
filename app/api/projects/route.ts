@@ -8,7 +8,7 @@ import { rateLimitProjectCreation } from '@/lib/rate-limit';
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Get the authenticated session
     const session = await auth.api.getSession({
