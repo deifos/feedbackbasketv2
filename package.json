@@ -1,6 +1,26 @@
 {
-  "name": "feedbackbasketv2",
-  "version": "0.1.0",
+  "name": "feedbackbasket",
+  "version": "1.0.0",
+  "description": "A modern, secure feedback collection platform that helps you gather, manage, and act on user feedback with ease.",
+  "keywords": [
+    "feedback",
+    "widget",
+    "nextjs",
+    "typescript",
+    "dashboard",
+    "user-feedback",
+    "embeddable"
+  ],
+  "author": "FeedbackBasket Team",
+  "license": "MIT",
+  "homepage": "https://github.com/your-username/feedbackbasket#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/feedbackbasket.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/feedbackbasket/issues"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
