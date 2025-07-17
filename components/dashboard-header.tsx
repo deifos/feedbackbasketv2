@@ -68,18 +68,6 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               >
                 Dashboard
               </Link>
-              <Link
-                href="/projects"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Projects
-              </Link>
-              <Link
-                href="/feedback"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Feedback
-              </Link>
             </nav>
           </div>
 

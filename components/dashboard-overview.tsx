@@ -193,6 +193,7 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
                         <Link
                           href={`/dashboard/projects/${project.id}/install`}
                           className="text-blue-600 hover:underline"
+                          prefetch
                         >
                           Get embed code
                         </Link>
@@ -208,79 +209,6 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
           </div>
         )}
       </div>
-
-      {/* Quick Actions Section */}
-      {projects.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Plus className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Add New Project</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Create another feedback collection project
-                    </p>
-                  </div>
-                  <Link href="/dashboard/projects/new">
-                    <Button variant="outline" size="sm">
-                      Add
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {stats.totalPendingFeedback > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <AlertCircle className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">Review Pending Feedback</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {stats.totalPendingFeedback} items need attention
-                      </p>
-                    </div>
-                    <Link
-                      href={`/dashboard/projects/${projects.find(p => p._count.pendingFeedback > 0)?.id}`}
-                    >
-                      <Button variant="outline" size="sm">
-                        Review
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Settings className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Customize Widgets</h3>
-                    <p className="text-sm text-muted-foreground">Update your widget appearance</p>
-                  </div>
-                  <Link href={`/dashboard/projects/${projects[0]?.id}/customize`}>
-                    <Button variant="outline" size="sm">
-                      Customize
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
