@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft, Settings, ExternalLink, Info } from 'lucide-react';
+import Image from 'next/image';
+import { Settings, ExternalLink, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Project, ProjectCustomization } from '@/app/generated/prisma';
 
@@ -13,22 +14,15 @@ interface ProjectHeaderProps {
 export function ProjectHeader({ project, onProjectDetails }: ProjectHeaderProps) {
   return (
     <div className="mb-8">
-      <div className="flex items-center space-x-4 mb-4">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </Link>
-      </div>
-
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             {project.logoUrl && (
-              <img
+              <Image
                 src={project.logoUrl}
                 alt={`${project.name} logo`}
+                width={32}
+                height={32}
                 className="w-8 h-8 object-contain"
               />
             )}

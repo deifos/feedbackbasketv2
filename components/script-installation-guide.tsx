@@ -6,7 +6,6 @@ import { ArrowLeft, Copy, Check, Code, Settings, ExternalLink, AlertCircle } fro
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardHeader } from '@/components/dashboard-header';
 import { Project, ProjectCustomization } from '@/app/generated/prisma';
 
 interface ScriptInstallationGuideProps {
@@ -32,7 +31,7 @@ interface ScriptInstallationGuideProps {
 export function ScriptInstallationGuide({
   project,
   scriptData,
-  user,
+  user: _user,
 }: ScriptInstallationGuideProps) {
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedCdn, setCopiedCdn] = useState(false);
@@ -78,8 +77,6 @@ export function ScriptInstallationGuide({
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader user={user} />
-
       <main className="container mx-auto py-8">
         {/* Header */}
         <div className="mb-8">

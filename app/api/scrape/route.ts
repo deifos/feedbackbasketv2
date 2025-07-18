@@ -17,7 +17,7 @@ interface EnhancedScrapeResponse {
     aiDescription: string;
     logoUrl?: string;
     ogImageUrl?: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
   };
   error?: string;
 }
@@ -51,19 +51,35 @@ Generate only the description, no additional text or formatting.`,
   }
 }
 
-function extractProjectMetadata(metadata: Record<string, any>) {
+function extractProjectMetadata(metadata: Record<string, unknown>) {
+  // Helper function to safely extract string values
+  const getString = (value: unknown): string => {
+    return typeof value === 'string' ? value : '';
+  };
+
   // Extract title - prefer ogTitle, fallback to title
-  const title = metadata.ogTitle || metadata['og:title'] || metadata.title || '';
+  const title =
+    getString(metadata.ogTitle) ||
+    getString(metadata['og:title']) ||
+    getString(metadata.title) ||
+    '';
 
   // Extract description - prefer ogDescription, fallback to description
   const description =
-    metadata.ogDescription || metadata['og:description'] || metadata.description || '';
+    getString(metadata.ogDescription) ||
+    getString(metadata['og:description']) ||
+    getString(metadata.description) ||
+    '';
 
   // Extract OpenGraph image - check multiple possible fields
-  const ogImageUrl = metadata.ogImage || metadata['og:image'] || metadata['twitter:image'] || '';
+  const ogImageUrl =
+    getString(metadata.ogImage) ||
+    getString(metadata['og:image']) ||
+    getString(metadata['twitter:image']) ||
+    '';
 
   // Extract favicon/logo URL
-  const logoUrl = metadata.favicon || '';
+  const logoUrl = getString(metadata.favicon) || '';
 
   return {
     title,

@@ -6,18 +6,23 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WidgetCustomizer } from '@/components/widget-customizer';
 import { WidgetPreview } from '@/components/widget-preview';
-import { DashboardHeader } from '@/components/dashboard-header';
 import { Project, ProjectCustomization } from '@/app/generated/prisma';
 import { CustomizationUpdateRequest } from '@/lib/types/api';
 
 interface WidgetCustomizationPageProps {
   project: Project;
   initialCustomization?: ProjectCustomization | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export function WidgetCustomizationPage({
   project,
   initialCustomization,
+  user: _user,
 }: WidgetCustomizationPageProps) {
   const [currentCustomization, setCurrentCustomization] = useState<CustomizationUpdateRequest>({
     buttonColor: initialCustomization?.buttonColor || '#3b82f6',
@@ -48,20 +53,17 @@ export function WidgetCustomizationPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader user={{ name: 'User', email: 'user@example.com' }} />
-
-      <main className="container mx-auto py-8">
+      <main className="container mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <Link href="/dashboard">
+            <Link href={`/dashboard/projects/${project.id}`}>
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                Back to Project
               </Button>
             </Link>
           </div>
-
           <div>
             <h1 className="text-3xl font-bold">Customize Widget</h1>
             <p className="text-muted-foreground mt-2">

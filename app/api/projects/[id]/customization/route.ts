@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { PrismaClient } from '@/app/generated/prisma';
+import { ProjectCustomizationInput } from '@/lib/validation';
 // import { CustomizationUpdateRequest } from '@/lib/types/api';
 
 const prisma = new PrismaClient();
@@ -182,7 +183,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     // Prepare update data (only include fields that were provided)
-    const updateData: any = {};
+    const updateData: Partial<ProjectCustomizationInput> = {};
     if (buttonColor !== undefined) updateData.buttonColor = buttonColor;
     if (buttonRadius !== undefined) updateData.buttonRadius = buttonRadius;
     if (buttonLabel !== undefined) updateData.buttonLabel = buttonLabel.trim();

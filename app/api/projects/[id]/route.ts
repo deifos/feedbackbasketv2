@@ -40,7 +40,14 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     // Sanitize inputs
-    const updates: any = {};
+    const updates: Partial<{
+      name?: string;
+      description?: string | null;
+      logoUrl?: string | null;
+      ogImageUrl?: string | null;
+      aiGenerated?: boolean;
+      lastAnalyzedAt?: Date | null;
+    }> = {};
 
     if (body.name) {
       const sanitizedName = sanitizeProjectName(body.name);

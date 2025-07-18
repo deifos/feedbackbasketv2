@@ -26,6 +26,9 @@ model User {
   sessions      Session[]
   accounts      Account[]
   projects      Project[]
+  subscription  Subscription?
+  usagePeriods  UsagePeriod[]
+  payments      Payment[]
 
   @@unique([email])
   @@map("user")
@@ -135,6 +138,8 @@ model Feedback {
   sentiment         Sentiment?        // AI-assigned sentiment
   categoryConfidence Float?           // AI confidence score (0-1)
   sentimentConfidence Float?          // AI confidence score (0-1)
+  aiReasoning       String?           // AI explanation for the analysis
+  analysisMethod    String?           // 'AI' or 'FALLBACK' - method used for analysis
   isAiAnalyzed      Boolean @default(false) // Whether AI analysis has been performed
   aiAnalyzedAt      DateTime?         // When AI analysis was performed
   
@@ -143,6 +148,10 @@ model Feedback {
   manualSentiment   Sentiment?        // User-assigned sentiment override
   categoryOverridden Boolean @default(false) // Whether user overrode AI category
   sentimentOverridden Boolean @default(false) // Whether user overrode AI sentiment
+
+  // Visibility control for subscription limits
+  isVisible     Boolean  @default(true)  // Controls if feedback is shown based on plan limits
+  visibilityRank Int?                    // Rank for determining which feedback to show (newest first)
 
   ipAddress String?
   userAgent String?
@@ -162,7 +171,60 @@ model Feedback {
   @@index([projectId, category]) // For project category analysis
   @@index([projectId, sentiment]) // For project sentiment analysis
   @@index([projectId, createdAt, category]) // For trend analysis
+  @@index([projectId, isVisible, createdAt]) // For visibility filtering
+  @@index([projectId, visibilityRank]) // For visibility ranking
   @@map("feedback")
+}
+
+model Subscription {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId      String?       @unique
+  stripeSubscriptionId  String?       @unique
+  stripePriceId         String?
+
+  plan              SubscriptionPlan  @default(FREE)
+  status            SubscriptionStatus @default(ACTIVE)
+
+  // Current billing period
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+
+  // Usage tracking for current period
+  feedbackUsedThisPeriod Int          @default(0)
+  projectCount          Int           @default(0)
+
+  // Plan limits (cached for performance)
+  feedbackLimit         Int           @default(100)
+  projectLimit          Int           @default(1)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@map("subscription")
+}
+
+model UsagePeriod {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  periodStart   DateTime
+  periodEnd     DateTime
+  plan          SubscriptionPlan
+
+  feedbackCount Int      @default(0)
+  feedbackLimit Int
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId, periodStart])
+  @@map("usage_period")
 }
 
 enum FeedbackStatus {
@@ -181,4 +243,63 @@ enum Sentiment {
   POSITIVE
   NEUTRAL
   NEGATIVE
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  UNPAID
+}
+
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+  PENDING
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Stripe identifiers
+  stripeInvoiceId    String  @unique
+  stripePaymentIntentId String?
+  stripeSubscriptionId String?
+  
+  // Payment details
+  amount            Int              // Amount in cents
+  currency          String           @default("usd")
+  status            PaymentStatus
+  
+  // Plan information at time of payment
+  planAtPayment     SubscriptionPlan
+  billingCycle      String?          // "monthly" or "annual"
+  
+  // Timestamps
+  paidAt            DateTime?        // When payment was actually processed
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  // Additional metadata
+  description       String?          // Payment description from Stripe
+  failureReason     String?          // If payment failed, the reason
+  
+  @@index([userId])
+  @@index([status])
+  @@index([paidAt])
+  @@index([planAtPayment])
+  @@map("payment")
 }

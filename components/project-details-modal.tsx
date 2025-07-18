@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { X, Edit, Save, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,7 +155,7 @@ export function ProjectDetailsModal({
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
           <div className="flex-1">
             {isEditing ? (
-              <div className="space-y-2">
+              <div className="grid w-full items-center gap-2">
                 <Label htmlFor="project-name">Project Name</Label>
                 <Input
                   id="project-name"
@@ -166,9 +167,11 @@ export function ProjectDetailsModal({
             ) : (
               <div className="flex items-center gap-2">
                 {project.logoUrl && (
-                  <img
+                  <Image
                     src={project.logoUrl}
                     alt={`${project.name} logo`}
+                    width={32}
+                    height={32}
                     className="w-8 h-8 object-contain"
                   />
                 )}
@@ -282,6 +285,7 @@ export function ProjectDetailsModal({
               <div>
                 <Label className="text-sm font-medium">Website Preview</Label>
                 <div className="mt-2 relative h-48 bg-gray-100 rounded-lg overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={imageUrl}
                     alt={`${project.name} preview`}

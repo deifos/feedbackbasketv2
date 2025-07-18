@@ -111,7 +111,7 @@ export function WidgetCustomizer({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Button Color */}
-        <div className="space-y-2">
+        <div className="grid w-full items-center gap-2">
           <Label htmlFor="buttonColor">Button Color</Label>
           <div className="flex items-center space-x-3">
             <Input
@@ -135,7 +135,7 @@ export function WidgetCustomizer({
         </div>
 
         {/* Button Radius */}
-        <div className="space-y-2">
+        <div className="grid w-full items-center gap-2">
           <Label htmlFor="buttonRadius">Button Border Radius</Label>
           <div className="flex items-center space-x-3">
             <Input
@@ -157,7 +157,7 @@ export function WidgetCustomizer({
         </div>
 
         {/* Button Label */}
-        <div className="space-y-2">
+        <div className="grid w-full items-center gap-2">
           <Label htmlFor="buttonLabel">Button Label</Label>
           <Input
             id="buttonLabel"
@@ -173,7 +173,7 @@ export function WidgetCustomizer({
         </div>
 
         {/* Intro Message */}
-        <div className="space-y-2">
+        <div className="grid w-full items-center gap-2">
           <Label htmlFor="introMessage">Intro Message</Label>
           <Input
             id="introMessage"
@@ -189,7 +189,7 @@ export function WidgetCustomizer({
         </div>
 
         {/* Success Message */}
-        <div className="space-y-2">
+        <div className="grid w-full items-center gap-2">
           <Label htmlFor="successMessage">Success Message</Label>
           <Input
             id="successMessage"

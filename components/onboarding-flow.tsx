@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { DashboardHeader } from '@/components/dashboard-header';
 import { WidgetPreviewOnboarding } from '@/components/widget-preview-onboarding';
+import { ProjectCreationForm } from '@/components/project-creation-form';
 
 interface OnboardingFlowProps {
   user: {
@@ -20,7 +20,7 @@ interface OnboardingFlowProps {
 
 type OnboardingStep = 'welcome' | 'create-project' | 'customize' | 'install' | 'complete';
 
-export function OnboardingFlow({ user }: OnboardingFlowProps) {
+export function OnboardingFlow({ user: _user }: OnboardingFlowProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [projectData, setProjectData] = useState({
@@ -53,38 +53,6 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
     { id: 'install', title: 'Install Widget', completed: currentStep === 'complete' },
     { id: 'complete', title: 'Complete', completed: false },
   ];
-
-  const handleCreateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: projectData.name,
-          url: projectData.url,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create project');
-      }
-
-      const project = await response.json();
-      setProjectData(prev => ({ ...prev, id: project.id }));
-      setCurrentStep('customize');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleCustomizeWidget = async () => {
     setIsLoading(true);
@@ -164,48 +132,18 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
               </p>
             </div>
 
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              <div>
-                <Label htmlFor="project-name">Project Name</Label>
-                <Input
-                  id="project-name"
-                  type="text"
-                  placeholder="My Awesome Website"
-                  value={projectData.name}
-                  onChange={e => setProjectData(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Give your project a memorable name
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="project-url">Website URL</Label>
-                <Input
-                  id="project-url"
-                  type="url"
-                  placeholder="https://mywebsite.com"
-                  value={projectData.url}
-                  onChange={e => setProjectData(prev => ({ ...prev, url: e.target.value }))}
-                  required
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  The URL where you&apos;ll embed the feedback widget
-                </p>
-              </div>
-
-              {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
-                  {error}
-                </div>
-              )}
-
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Creating Project...' : 'Create Project'}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </form>
+            <ProjectCreationForm
+              onSuccess={project => {
+                setProjectData(prev => ({
+                  ...prev,
+                  id: project.id,
+                  name: project.name,
+                  url: project.url,
+                }));
+                setCurrentStep('customize');
+              }}
+              submitButtonText="Create Project & Continue"
+            />
           </div>
         );
 
@@ -225,7 +163,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
             <div className="grid md:grid-cols-2 gap-6">
               {/* Customization Controls */}
               <div className="space-y-4">
-                <div>
+                <div className="grid w-full items-center gap-2">
                   <Label htmlFor="button-color">Button Color</Label>
                   <div className="flex items-center space-x-3">
                     <Input
@@ -248,7 +186,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                <div>
+                <div className="grid w-full items-center gap-2">
                   <Label htmlFor="button-radius">
                     Border Radius: {customization.buttonRadius}px
                   </Label>
@@ -268,7 +206,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
                   />
                 </div>
 
-                <div>
+                <div className="grid w-full items-center gap-2">
                   <Label htmlFor="button-label">Button Label</Label>
                   <Input
                     id="button-label"
@@ -281,7 +219,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
                   />
                 </div>
 
-                <div>
+                <div className="grid w-full items-center gap-2">
                   <Label htmlFor="intro-message">Intro Message</Label>
                   <Input
                     id="intro-message"
@@ -294,7 +232,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
                   />
                 </div>
 
-                <div>
+                <div className="grid w-full items-center gap-2">
                   <Label htmlFor="success-message">Success Message</Label>
                   <Input
                     id="success-message"
@@ -429,8 +367,6 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader user={user} />
-
       <main className="container mx-auto py-8">
         <div className="max-w-4xl mx-auto">
           {/* Progress Steps */}

@@ -41,24 +41,27 @@ export default async function ProjectPage(props: ProjectPageProps) {
 
   // Fetch feedback statistics efficiently using database aggregation
   const [feedbackStats, recentFeedback] = await Promise.all([
-    // Get feedback counts by status in a single optimized query
+    // Get feedback counts by status in a single optimized query - only visible feedback
     prisma.feedback.groupBy({
       by: ['status'],
       where: {
         projectId: project.id,
+        isVisible: true, // Only count visible feedback based on subscription limits
       },
       _count: {
         id: true,
       },
     }),
-    // Get recent feedback for initial display (first page)
+    // Get recent feedback for initial display (first page) - only visible feedback
     prisma.feedback.findMany({
       where: {
         projectId: project.id,
+        isVisible: true, // Only show visible feedback based on subscription limits
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: [
+        { visibilityRank: 'asc' }, // Primary sort by visibility rank (newest first)
+        { createdAt: 'desc' }, // Secondary sort by creation date
+      ],
       take: 50, // Limit initial load to 50 items for better performance
     }),
   ]);

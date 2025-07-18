@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardHeader } from '@/components/dashboard-header';
 import { ProjectHeader } from '@/components/project-header';
 import { ProjectStats } from '@/components/project-stats';
 import { FeedbackFilters } from '@/components/feedback-filters';
@@ -41,7 +40,7 @@ interface ProjectDashboardProps {
   };
 }
 
-export function ProjectDashboard({ project, feedback, stats, user }: ProjectDashboardProps) {
+export function ProjectDashboard({ project, feedback, stats, user: _user }: ProjectDashboardProps) {
   // Calculate additional stats for AI analysis using helper function
   const enhancedStats = useMemo(() => calculateEnhancedStats(feedback, stats), [feedback, stats]);
 
@@ -169,33 +168,11 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
     }
   };
 
-  const handleStatusChange = async (
-    feedbackId: string,
-    newStatus: 'PENDING' | 'REVIEWED' | 'DONE'
-  ) => {
-    try {
-      const response = await fetch(`/api/feedback/${feedbackId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        // Refresh the page to show updated data
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Failed to update status:', error);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader user={user} />
+      {/* <DashboardHeader user={_user} /> */}
 
-      <main className="container mx-auto py-8">
+      <main className="container mx-auto">
         <ProjectHeader project={project} onProjectDetails={handleProjectDetails} />
 
         <ProjectStats stats={enhancedStats} />
@@ -247,7 +224,7 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
             <Tabs
               value={filters.selectedStatus}
               onValueChange={value => {
-                updateFilter('selectedStatus', value as any);
+                updateFilter('selectedStatus', value as 'PENDING' | 'REVIEWED' | 'DONE' | 'all');
                 resetPagination();
               }}
             >
@@ -307,7 +284,6 @@ export function ProjectDashboard({ project, feedback, stats, user }: ProjectDash
                           feedback={item}
                           isSelected={selectedFeedbackIds.has(item.id)}
                           onSelect={() => handleSelectFeedback(item.id)}
-                          onStatusChange={handleStatusChange}
                           onNotesUpdate={(feedbackId, notes) => {
                             // Update notes via API
                             fetch(`/api/feedback/${feedbackId}`, {

@@ -46,15 +46,23 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       );
     }
 
-    const { status, notes } = validationResult.data;
+    const {
+      status,
+      notes,
+      manualCategory,
+      manualSentiment,
+      categoryOverridden,
+      sentimentOverridden,
+    } = validationResult.data;
 
-    // Check if feedback exists and user owns the project
+    // Check if feedback exists, user owns the project, and feedback is visible
     const feedback = await prisma.feedback.findFirst({
       where: {
         id: id,
         project: {
           userId: session.user.id,
         },
+        isVisible: true, // Only allow access to visible feedback
       },
       include: {
         project: true,
@@ -69,11 +77,42 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     // Prepare update data with sanitization
-    const updateData: any = {};
+    const updateData: Partial<{
+      status?: 'PENDING' | 'REVIEWED' | 'DONE';
+      notes?: string | null;
+      manualCategory?: 'BUG' | 'FEATURE' | 'REVIEW' | null;
+      manualSentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | null;
+      categoryOverridden?: boolean;
+      sentimentOverridden?: boolean;
+    }> = {};
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) {
       const sanitizedNotes = sanitizeNotes(notes);
       updateData.notes = sanitizedNotes || null;
+    }
+
+    // Handle manual overrides for AI analysis
+    if (manualCategory !== undefined) {
+      updateData.manualCategory = manualCategory;
+      updateData.categoryOverridden = true;
+    }
+    if (manualSentiment !== undefined) {
+      updateData.manualSentiment = manualSentiment;
+      updateData.sentimentOverridden = true;
+    }
+    if (categoryOverridden !== undefined) {
+      updateData.categoryOverridden = categoryOverridden;
+      // If setting to false, clear the manual category
+      if (!categoryOverridden) {
+        updateData.manualCategory = null;
+      }
+    }
+    if (sentimentOverridden !== undefined) {
+      updateData.sentimentOverridden = sentimentOverridden;
+      // If setting to false, clear the manual sentiment
+      if (!sentimentOverridden) {
+        updateData.manualSentiment = null;
+      }
     }
 
     // Update the feedback
@@ -123,13 +162,14 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
 
     const { id } = params;
 
-    // Check if feedback exists and user owns the project
+    // Check if feedback exists, user owns the project, and feedback is visible
     const feedback = await prisma.feedback.findFirst({
       where: {
         id: id,
         project: {
           userId: session.user.id,
         },
+        isVisible: true, // Only allow deletion of visible feedback
       },
     });
 

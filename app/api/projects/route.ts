@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
-import { PrismaClient } from '@/app/generated/prisma';
 import { projectSchema } from '@/lib/validation';
 import { sanitizeProjectName, sanitizeUrl } from '@/lib/sanitization';
 import { rateLimitProjectCreation } from '@/lib/rate-limit';
-
-const prisma = new PrismaClient();
+import { handleApiError, logError } from '@/lib/error-handler';
+import { subscriptionService } from '@/lib/services/subscription-service';
+import { usageTrackingService } from '@/lib/services/usage-tracking-service';
+import prisma from '@/lib/prisma';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -42,11 +43,13 @@ export async function GET(_request: NextRequest) {
 
     // Get pending feedback counts for all projects in a single optimized query
     // This now uses the composite index (projectId, status) for better performance
+    // Only count visible feedback based on subscription limits
     const pendingCounts = await prisma.feedback.groupBy({
       by: ['projectId'],
       where: {
         projectId: { in: projects.map(p => p.id) },
         status: 'PENDING',
+        isVisible: true, // Only count visible feedback based on subscription limits
       },
       _count: {
         id: true,
@@ -67,11 +70,9 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json(projectsWithCounts);
   } catch (error) {
-    console.error('Error fetching projects:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to fetch projects' },
-      { status: 500 }
-    );
+    logError(error, 'GET /api/projects');
+    const apiError = handleApiError(error);
+    return NextResponse.json(apiError, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }
@@ -108,6 +109,39 @@ export async function POST(request: NextRequest) {
             'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
           },
         }
+      );
+    }
+
+    // Check subscription limits before allowing project creation
+    const canCreateProject = await subscriptionService.canCreateProject(session.user.id);
+    if (!canCreateProject) {
+      const usage = await subscriptionService.getCurrentUsage(session.user.id);
+
+      // Get available upgrade options
+      const upgradeOptions = [];
+      if (usage.currentPlan === 'FREE') {
+        upgradeOptions.push(
+          { plan: 'STARTER', projects: 3, price: { monthly: 19, annual: 17 } },
+          { plan: 'PRO', projects: 10, price: { monthly: 39, annual: 35 } }
+        );
+      } else if (usage.currentPlan === 'STARTER') {
+        upgradeOptions.push({ plan: 'PRO', projects: 10, price: { monthly: 39, annual: 35 } });
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Subscription Limit Exceeded',
+          code: 'PROJECT_LIMIT_REACHED',
+          message: `You've reached your project limit of ${usage.projects.limit} for the ${usage.currentPlan} plan. Please upgrade to create more projects.`,
+          details: {
+            currentPlan: usage.currentPlan,
+            projectLimit: usage.projects.limit,
+            projectsUsed: usage.projects.used,
+            upgradeOptions,
+            upgradeRequired: true,
+          },
+        },
+        { status: 403 }
       );
     }
 
@@ -168,67 +202,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to scrape and analyze the website for enhanced project data
-    let enhancedData = {
-      description: undefined as string | undefined,
-      logoUrl: undefined as string | undefined,
-      ogImageUrl: undefined as string | undefined,
-      scrapedMetadata: undefined as any,
-      aiGenerated: false,
-      lastAnalyzedAt: undefined as Date | undefined,
-    };
-
-    try {
-      console.log('Attempting to scrape website for enhanced project data:', sanitizedUrl);
-
-      // Call our enhanced scrape endpoint
-      const scrapeResponse = await fetch(
-        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/scrape`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ url: sanitizedUrl }),
-        }
-      );
-
-      if (scrapeResponse.ok) {
-        const scrapeResult = await scrapeResponse.json();
-
-        if (scrapeResult.success && scrapeResult.data) {
-          enhancedData = {
-            description: scrapeResult.data.aiDescription || scrapeResult.data.description,
-            logoUrl: scrapeResult.data.logoUrl,
-            ogImageUrl: scrapeResult.data.ogImageUrl,
-            scrapedMetadata: scrapeResult.data.metadata,
-            aiGenerated: !!scrapeResult.data.aiDescription,
-            lastAnalyzedAt: new Date(),
-          };
-          console.log('Website analysis successful, enhanced data extracted');
-        } else {
-          console.log('Website analysis failed:', scrapeResult.error);
-        }
-      } else {
-        console.log('Scrape endpoint returned error status:', scrapeResponse.status);
-      }
-    } catch (scrapeError) {
-      console.error('Error during website analysis:', scrapeError);
-      // Continue with project creation even if scraping fails
-    }
-
-    // Create the project with enhanced data and default customization
+    // Create the project with user-provided data only (no auto-scraping)
     const project = await prisma.project.create({
       data: {
         name: sanitizedName,
         url: sanitizedUrl,
         userId: session.user.id,
-        description: description || enhancedData.description, // User description takes priority
-        logoUrl: enhancedData.logoUrl,
-        ogImageUrl: enhancedData.ogImageUrl,
-        scrapedMetadata: enhancedData.scrapedMetadata,
-        aiGenerated: !description && enhancedData.aiGenerated, // Only AI-generated if user didn't provide description
-        lastAnalyzedAt: enhancedData.lastAnalyzedAt,
+        description: description,
         customization: {
           create: {
             buttonColor: '#3b82f6',
@@ -247,6 +227,14 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Track project creation for usage limits
+    try {
+      await usageTrackingService.trackProjectCreation(session.user.id, project.id);
+    } catch (error) {
+      console.error('Failed to track project creation:', error);
+      // Don't fail the project creation if usage tracking fails
+    }
 
     // Return the created project with counts
     const projectWithCounts = {

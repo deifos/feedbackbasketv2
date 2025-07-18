@@ -94,7 +94,7 @@ export function WidgetPreview({ customization }: WidgetPreviewProps) {
                         </p>
                       </div>
 
-                      <div>
+                      <div className="grid w-full items-center gap-2">
                         <Label htmlFor="preview-email">Email (optional)</Label>
                         <Input
                           id="preview-email"
@@ -102,18 +102,17 @@ export function WidgetPreview({ customization }: WidgetPreviewProps) {
                           value={email}
                           onChange={e => setEmail(e.target.value)}
                           placeholder="your@email.com"
-                          className="mt-1"
                         />
                       </div>
 
-                      <div>
+                      <div className="grid w-full items-center gap-2">
                         <Label htmlFor="preview-feedback">Your feedback *</Label>
                         <textarea
                           id="preview-feedback"
                           value={feedback}
                           onChange={e => setFeedback(e.target.value)}
                           placeholder="Tell us what you think..."
-                          className="w-full mt-1 p-2 border border-gray-300 rounded-md resize-none h-24 text-sm"
+                          className="w-full p-2 border border-gray-300 rounded-md resize-none h-24 text-sm"
                           required
                         />
                       </div>

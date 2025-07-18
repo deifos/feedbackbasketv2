@@ -7,6 +7,7 @@ import { signOut } from '@/lib/auth-client';
 import { ChevronDown, LogOut, User } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface DashboardHeaderProps {
   user: {
@@ -20,6 +21,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
   const handleSignOut = async () => {
     try {
       await signOut({
@@ -68,6 +70,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               >
                 Dashboard
               </Link>
+              <Link
+                href="/pricing"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Pricing
+              </Link>
             </nav>
           </div>
 
@@ -80,10 +88,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 className="flex items-center space-x-2"
               >
                 <div className="flex items-center space-x-2">
-                  {user.image ? (
-                    <img
+                  {user?.image ? (
+                    <Image
                       src={user.image}
                       alt={user.name || 'User'}
+                      width={24}
+                      height={24}
                       className="h-6 w-6 rounded-full"
                     />
                   ) : (
@@ -91,13 +101,24 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                       <User className="h-3 w-3" />
                     </div>
                   )}
-                  <span className="text-sm font-medium">{user.name || user.email}</span>
+                  <span className="text-sm font-medium">{user?.name || user?.email}</span>
                 </div>
                 <ChevronDown className="h-4 w-4" />
               </Button>
 
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 rounded-md border bg-popover p-1 shadow-md">
+                  <Link href="/account">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-left"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Account
+                    </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="sm"

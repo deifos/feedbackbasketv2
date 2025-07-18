@@ -1,4 +1,7 @@
 import { FeedbackCategory, Sentiment } from '@/app/generated/prisma';
+import { generateObject } from 'ai';
+import { google } from '@ai-sdk/google';
+import { z } from 'zod';
 
 // AI Analysis result interface
 export interface AIAnalysisResult {
@@ -6,17 +9,109 @@ export interface AIAnalysisResult {
   sentiment: Sentiment;
   categoryConfidence: number; // 0-1
   sentimentConfidence: number; // 0-1
-  reasoning?: string; // Optional explanation
+  reasoning: string;
+  analysisMethod: 'AI' | 'FALLBACK';
+  processingTime?: number; // milliseconds
 }
+
+// AI Analysis Client
+class AIAnalysisClient {
+  private model: ReturnType<typeof google>;
+
+  constructor() {
+    // Initialize with Google Gemini model - can easily switch to other models
+    this.model = google('gemini-1.5-flash');
+  }
+
+  async analyzeContent(content: string): Promise<AIAnalysisResult> {
+    const startTime = Date.now();
+
+    // Input validation
+    if (!content || content.trim().length === 0) {
+      throw new Error('Content cannot be empty for AI analysis');
+    }
+
+    if (content.length > 5000) {
+      throw new Error('Content too long for AI analysis (max 5000 characters)');
+    }
+
+    try {
+      const { object } = await generateObject({
+        model: this.model,
+        prompt: this.buildPrompt(content),
+        schema: z.object({
+          sentiment: z.enum(['POSITIVE', 'NEGATIVE', 'NEUTRAL']),
+          category: z.enum(['BUG', 'FEATURE', 'REVIEW']),
+          sentimentConfidence: z.number().min(0).max(1),
+          categoryConfidence: z.number().min(0).max(1),
+          reasoning: z.string(),
+        }),
+        temperature: 0.1, // Low temperature for consistent results
+      });
+
+      // Validate the response
+      if (!object.sentiment || !object.category) {
+        throw new Error('Invalid AI response: missing required fields');
+      }
+
+      return {
+        sentiment: object.sentiment as Sentiment,
+        category: object.category as FeedbackCategory,
+        sentimentConfidence: Math.max(0, Math.min(1, object.sentimentConfidence)), // Clamp to 0-1
+        categoryConfidence: Math.max(0, Math.min(1, object.categoryConfidence)), // Clamp to 0-1
+        reasoning: object.reasoning || 'No reasoning provided',
+        analysisMethod: 'AI',
+        processingTime: Date.now() - startTime,
+      };
+    } catch (error) {
+      console.error('AI analysis failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        contentLength: content.length,
+        processingTime: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      });
+      throw new Error(
+        `Failed to analyze content with AI: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  private buildPrompt(content: string): string {
+    return `
+Analyze the following user feedback and classify it:
+
+Feedback: "${content}"
+
+Provide:
+- sentiment: POSITIVE (happy, satisfied, praise), NEGATIVE (frustrated, angry, complaints), or NEUTRAL (informational, questions)
+- category: BUG (errors, issues, problems), FEATURE (requests, suggestions, improvements), or REVIEW (general feedback, opinions)
+- sentimentConfidence: 0.0 to 1.0 scale indicating certainty of sentiment
+- categoryConfidence: 0.0 to 1.0 scale indicating certainty of category
+- reasoning: Brief 1-2 sentence explanation of the classification
+    `;
+  }
+}
+
+// Create a singleton instance
+const aiClient = new AIAnalysisClient();
 
 /**
  * Analyze feedback content using AI to determine category and sentiment
- * This is a placeholder implementation - replace with actual AI service
  */
 export async function analyzeFeedbackWithAI(content: string): Promise<AIAnalysisResult> {
-  // TODO: Replace with actual AI service (OpenAI, Claude, etc.)
-  // For now, we'll use a simple rule-based approach as a placeholder
+  try {
+    return await aiClient.analyzeContent(content);
+  } catch (error) {
+    console.error('AI analysis failed, falling back to rule-based analysis:', error);
+    // Fall back to rule-based analysis
+    return await analyzeFeedbackWithFallback(content);
+  }
+}
 
+/**
+ * Fallback rule-based analysis (enhanced version of the original)
+ */
+async function analyzeFeedbackWithFallback(content: string): Promise<AIAnalysisResult> {
   const lowerContent = content.toLowerCase();
 
   // Simple category detection based on keywords
@@ -88,7 +183,8 @@ export async function analyzeFeedbackWithAI(content: string): Promise<AIAnalysis
     sentiment,
     categoryConfidence,
     sentimentConfidence,
-    reasoning: `Detected ${category.toLowerCase()} with ${sentiment.toLowerCase()} sentiment based on content analysis`,
+    reasoning: `Fallback analysis: Detected ${category.toLowerCase()} with ${sentiment.toLowerCase()} sentiment based on keyword analysis`,
+    analysisMethod: 'FALLBACK',
   };
 }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Calendar,
   Mail,
@@ -12,6 +13,7 @@ import {
   Smile,
   Frown,
   Meh,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +30,6 @@ interface FeedbackItemProps {
   feedback: Feedback;
   isSelected?: boolean;
   onSelect?: () => void;
-  onStatusChange: (feedbackId: string, newStatus: 'PENDING' | 'REVIEWED' | 'DONE') => void;
   onNotesUpdate: (feedbackId: string, notes: string) => void;
 }
 
@@ -36,11 +37,14 @@ export function FeedbackItem({
   feedback,
   isSelected = false,
   onSelect,
-  onStatusChange,
   onNotesUpdate,
 }: FeedbackItemProps) {
+  const router = useRouter();
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteText, setNoteText] = useState(feedback.notes || '');
+  const [updatingCategory, setUpdatingCategory] = useState(false);
+  const [updatingSentiment, setUpdatingSentiment] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -63,6 +67,31 @@ export function FeedbackItem({
   const handleNotesCancel = () => {
     setNoteText(feedback.notes || '');
     setEditingNotes(false);
+  };
+
+  const handleStatusChange = async (newStatus: 'PENDING' | 'REVIEWED' | 'DONE') => {
+    setUpdatingStatus(newStatus);
+    try {
+      const response = await fetch(`/api/feedback/${feedback.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated changes
+        router.refresh();
+        setUpdatingStatus(null);
+      } else {
+        console.error('Failed to update status');
+        setUpdatingStatus(null);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      setUpdatingStatus(null);
+    }
   };
 
   const getIconComponent = (iconName: string, className = 'h-3 w-3') => {
@@ -102,7 +131,7 @@ export function FeedbackItem({
             )}
             <Badge className={getStatusColor(feedback.status)}>{feedback.status}</Badge>
 
-            {/* Category and Sentiment Badges */}
+            {/* Category and Sentiment Badges with AI Confidence */}
             {(() => {
               const effectiveCategory = getEffectiveCategory(feedback);
               const effectiveSentiment = getEffectiveSentiment(feedback);
@@ -112,17 +141,45 @@ export function FeedbackItem({
               return (
                 <>
                   {effectiveCategory && (
-                    <Badge className={`${categoryInfo.color} text-xs flex items-center gap-1`}>
-                      {getIconComponent(categoryInfo.icon)}
-                      {categoryInfo.label}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge className={`${categoryInfo.color} text-xs flex items-center gap-1`}>
+                        {getIconComponent(categoryInfo.icon)}
+                        {categoryInfo.label}
+                        {feedback.categoryOverridden && (
+                          <span className="text-xs opacity-75">(Manual)</span>
+                        )}
+                      </Badge>
+                      {feedback.categoryConfidence && !feedback.categoryOverridden && (
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(feedback.categoryConfidence * 100)}%
+                        </span>
+                      )}
+                    </div>
                   )}
                   {effectiveSentiment && (
-                    <Badge className={`${sentimentInfo.color} text-xs flex items-center gap-1`}>
-                      {getIconComponent(sentimentInfo.icon)}
-                      {sentimentInfo.label}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge className={`${sentimentInfo.color} text-xs flex items-center gap-1`}>
+                        {getIconComponent(sentimentInfo.icon)}
+                        {sentimentInfo.label}
+                        {feedback.sentimentOverridden && (
+                          <span className="text-xs opacity-75">(Manual)</span>
+                        )}
+                      </Badge>
+                      {feedback.sentimentConfidence && !feedback.sentimentOverridden && (
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(feedback.sentimentConfidence * 100)}%
+                        </span>
+                      )}
+                    </div>
                   )}
+                  {/* Analysis Method Indicator - only show if no manual overrides */}
+                  {feedback.analysisMethod &&
+                    !feedback.categoryOverridden &&
+                    !feedback.sentimentOverridden && (
+                      <Badge variant="outline" className="text-xs">
+                        {feedback.analysisMethod === 'AI' ? '🤖 AI' : '📋 Rule-based'}
+                      </Badge>
+                    )}
                 </>
               );
             })()}
@@ -140,9 +197,11 @@ export function FeedbackItem({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onStatusChange(feedback.id, 'PENDING')}
-                className="text-orange-600 hover:text-orange-700"
+                disabled={updatingStatus === 'PENDING'}
+                onClick={() => handleStatusChange('PENDING')}
+                className="text-orange-600 hover:text-orange-700 disabled:opacity-50"
               >
+                {updatingStatus === 'PENDING' && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                 Mark Pending
               </Button>
             )}
@@ -150,9 +209,11 @@ export function FeedbackItem({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onStatusChange(feedback.id, 'REVIEWED')}
-                className="text-blue-600 hover:text-blue-700"
+                disabled={updatingStatus === 'REVIEWED'}
+                onClick={() => handleStatusChange('REVIEWED')}
+                className="text-blue-600 hover:text-blue-700 disabled:opacity-50"
               >
+                {updatingStatus === 'REVIEWED' && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                 Mark Reviewed
               </Button>
             )}
@@ -160,9 +221,11 @@ export function FeedbackItem({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onStatusChange(feedback.id, 'DONE')}
-                className="text-green-600 hover:text-green-700"
+                disabled={updatingStatus === 'DONE'}
+                onClick={() => handleStatusChange('DONE')}
+                className="text-green-600 hover:text-green-700 disabled:opacity-50"
               >
+                {updatingStatus === 'DONE' && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                 Mark Done
               </Button>
             )}
@@ -181,6 +244,117 @@ export function FeedbackItem({
             <a href={`mailto:${feedback.email}`} className="hover:underline">
               {feedback.email}
             </a>
+          </div>
+        )}
+
+        {/* AI Analysis Reasoning */}
+        {feedback.aiReasoning && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+            <h5 className="text-sm font-medium text-blue-900 mb-1">AI Analysis</h5>
+            <p className="text-sm text-blue-800">{feedback.aiReasoning}</p>
+
+            {/* Manual Override Controls */}
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="text-blue-700 font-medium">Override:</span>
+
+                {/* Category Override */}
+                <div className="flex items-center gap-1">
+                  <select
+                    value={feedback.categoryOverridden ? feedback.manualCategory || '' : ''}
+                    disabled={updatingCategory}
+                    onChange={async e => {
+                      const newCategory = e.target.value;
+                      if (newCategory) {
+                        setUpdatingCategory(true);
+                        try {
+                          const response = await fetch(`/api/feedback/${feedback.id}`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              manualCategory: newCategory,
+                            }),
+                          });
+
+                          if (response.ok) {
+                            // Refresh the data to show updated changes
+                            router.refresh();
+                            setUpdatingCategory(false);
+                          } else {
+                            console.error('Failed to update category override');
+                            setUpdatingCategory(false);
+                          }
+                        } catch (error) {
+                          console.error('Error updating category override:', error);
+                          setUpdatingCategory(false);
+                        }
+                      }
+                    }}
+                    className={`text-xs border border-blue-300 rounded px-2 py-1 bg-white ${
+                      updatingCategory ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <option value="">
+                      Category: {getCategoryInfo(getEffectiveCategory(feedback)).label}
+                    </option>
+                    <option value="BUG">Bug</option>
+                    <option value="FEATURE">Feature</option>
+                    <option value="REVIEW">Review</option>
+                  </select>
+                  {updatingCategory && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
+                </div>
+
+                {/* Sentiment Override */}
+                <div className="flex items-center gap-1">
+                  <select
+                    value={feedback.sentimentOverridden ? feedback.manualSentiment || '' : ''}
+                    disabled={updatingSentiment}
+                    onChange={async e => {
+                      const newSentiment = e.target.value;
+                      if (newSentiment) {
+                        setUpdatingSentiment(true);
+                        try {
+                          const response = await fetch(`/api/feedback/${feedback.id}`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              manualSentiment: newSentiment,
+                            }),
+                          });
+
+                          if (response.ok) {
+                            // Refresh the data to show updated changes
+                            router.refresh();
+                            setUpdatingSentiment(false);
+                          } else {
+                            console.error('Failed to update sentiment override');
+                            setUpdatingSentiment(false);
+                          }
+                        } catch (error) {
+                          console.error('Error updating sentiment override:', error);
+                          setUpdatingSentiment(false);
+                        }
+                      }
+                    }}
+                    className={`text-xs border border-blue-300 rounded px-2 py-1 bg-white ${
+                      updatingSentiment ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <option value="">
+                      Sentiment: {getSentimentInfo(getEffectiveSentiment(feedback)).label}
+                    </option>
+                    <option value="POSITIVE">Positive</option>
+                    <option value="NEUTRAL">Neutral</option>
+                    <option value="NEGATIVE">Negative</option>
+                  </select>
+                  {updatingSentiment && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

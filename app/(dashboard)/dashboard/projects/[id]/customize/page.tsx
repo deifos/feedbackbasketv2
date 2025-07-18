@@ -39,5 +39,11 @@ export default async function CustomizePage(props: CustomizePageProps) {
 
   await prisma.$disconnect();
 
-  return <WidgetCustomizationPage project={project} initialCustomization={project.customization} />;
+  return (
+    <WidgetCustomizationPage
+      project={project}
+      initialCustomization={project.customization}
+      user={session.user}
+    />
+  );
 }

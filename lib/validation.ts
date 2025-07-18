@@ -42,10 +42,14 @@ export const feedbackSchema = z.object({
     .or(z.literal('')),
 });
 
-// Feedback update schema (for status and notes updates)
+// Feedback update schema (for status, notes, and manual overrides)
 export const feedbackUpdateSchema = z.object({
   status: z.enum(['PENDING', 'REVIEWED', 'DONE']).optional(),
   notes: z.string().max(1000, 'Notes must be less than 1000 characters').trim().optional(),
+  manualCategory: z.enum(['BUG', 'FEATURE', 'REVIEW']).optional(),
+  manualSentiment: z.enum(['POSITIVE', 'NEGATIVE', 'NEUTRAL']).optional(),
+  categoryOverridden: z.boolean().optional(),
+  sentimentOverridden: z.boolean().optional(),
 });
 
 // Project customization schema

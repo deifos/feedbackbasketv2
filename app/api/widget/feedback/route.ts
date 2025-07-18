@@ -4,6 +4,9 @@ import { feedbackSchema } from '@/lib/validation';
 import { sanitizeFeedbackContent, sanitizeEmail } from '@/lib/sanitization';
 import { rateLimitFeedback } from '@/lib/rate-limit';
 import { analyzeFeedbackWithAI } from '@/lib/ai-analysis';
+// import { subscriptionService } from '@/lib/services/subscription-service';
+import { usageTrackingService } from '@/lib/services/usage-tracking-service';
+import { feedbackVisibilityService } from '@/lib/services/feedback-visibility-service';
 
 const prisma = new PrismaClient();
 
@@ -92,9 +95,15 @@ export async function POST(request: NextRequest) {
     let aiAnalysis = null;
     try {
       aiAnalysis = await analyzeFeedbackWithAI(sanitizedContent);
+      console.log(`AI analysis completed for feedback: ${aiAnalysis.analysisMethod} method used`);
     } catch (error) {
-      console.error('AI analysis failed:', error);
-      // Continue without AI analysis if it fails
+      console.error('AI analysis failed completely:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        projectId,
+        contentLength: sanitizedContent.length,
+        timestamp: new Date().toISOString(),
+      });
+      // Continue without AI analysis if it fails - feedback submission should never be blocked
     }
 
     // Create the feedback record with AI analysis
@@ -112,6 +121,8 @@ export async function POST(request: NextRequest) {
           sentiment: aiAnalysis.sentiment,
           categoryConfidence: aiAnalysis.categoryConfidence,
           sentimentConfidence: aiAnalysis.sentimentConfidence,
+          aiReasoning: aiAnalysis.reasoning,
+          analysisMethod: aiAnalysis.analysisMethod,
           isAiAnalyzed: true,
           aiAnalyzedAt: new Date(),
         }),
@@ -124,6 +135,22 @@ export async function POST(request: NextRequest) {
         sentiment: true,
       },
     });
+
+    // Track feedback usage for subscription limits
+    try {
+      await usageTrackingService.trackFeedbackCreation(project.userId, projectId);
+    } catch (error) {
+      console.error('Failed to track feedback usage:', error);
+      // Don't fail the feedback submission if usage tracking fails
+    }
+
+    // Handle feedback visibility based on subscription limits
+    try {
+      await feedbackVisibilityService.handleFeedbackCreation(project.userId, feedback.id);
+    } catch (error) {
+      console.error('Failed to handle feedback visibility:', error);
+      // Don't fail the feedback submission if visibility handling fails
+    }
 
     // Return success response
     return NextResponse.json(

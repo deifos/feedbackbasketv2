@@ -7,6 +7,7 @@ import { authClient } from '@/lib/auth-client';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 // import { useRouter } from 'next/navigation';
 
 interface AuthFormProps extends React.ComponentProps<'div'> {
@@ -94,10 +95,12 @@ export function AuthForm({ className, mode, ...props }: AuthFormProps) {
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <img
+            <Image
               src="/feedback-basket-login.png"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              alt="Authentication background"
+              fill
+              className="object-cover dark:brightness-[0.2] dark:grayscale"
+              priority
             />
           </div>
         </CardContent>

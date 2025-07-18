@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { FeedbackWidget } from '@/components/feedback-widget';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -27,11 +28,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
 
         {/* Feedback Widget */}
         <FeedbackWidget
-          projectId="cmd6rlep10001sbix2w6kyc73"
+          projectId="cmdah106i0001sbsoh21p58f6"
           apiEndpoint="http://localhost:3000/api/widget/feedback"
           buttonColor="#3b82f6"
           buttonRadius={8}

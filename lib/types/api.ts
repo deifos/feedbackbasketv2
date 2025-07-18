@@ -5,7 +5,7 @@ export interface ApiError {
   error: string;
   message: string;
   statusCode?: number;
-  details?: any;
+  details?: unknown;
 }
 
 // Project with counts for dashboard
@@ -74,7 +74,7 @@ export interface FeedbackSubmissionResponse {
 }
 
 // Standard API response wrapper
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
