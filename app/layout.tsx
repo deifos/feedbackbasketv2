@@ -33,7 +33,7 @@ export default function RootLayout({
         {/* Feedback Widget */}
         {/* TODO: Simplify this process, maybe 1 url to fetch eveyrthing else. */}
         <FeedbackWidget
-          projectId="cmdalaunm0001l7046cj64j7r"
+          projectId="cmdanm5rr0005k2040dugacyv"
           apiEndpoint="https://www.feedbackbasket.com/api/widget/feedback"
           buttonColor="#3b82f6"
           buttonRadius={8}
