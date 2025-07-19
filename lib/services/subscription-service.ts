@@ -196,31 +196,47 @@ export class SubscriptionService {
       currentPeriodEnd?: Date;
     }
   ): Promise<void> {
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId },
-    });
+    try {
+      // Ensure user has a subscription record first
+      await this.initializeUserSubscription(userId);
 
-    if (!subscription) {
-      throw new Error('Subscription not found');
-    }
+      const subscription = await prisma.subscription.findUnique({
+        where: { userId },
+      });
 
-    const updateData: Record<string, unknown> = { ...updates };
+      if (!subscription) {
+        throw new Error(`Subscription not found for user ${userId}`);
+      }
 
-    // If plan is changing, update limits
-    if (updates.plan && updates.plan !== subscription.plan) {
-      const planConfig = PLAN_CONFIGS[updates.plan];
-      updateData.feedbackLimit = planConfig.feedbackPerMonth;
-      updateData.projectLimit = planConfig.projects;
-    }
+      const updateData: Record<string, unknown> = { ...updates };
 
-    await prisma.subscription.update({
-      where: { userId },
-      data: updateData,
-    });
+      // If plan is changing, update limits
+      if (updates.plan && updates.plan !== subscription.plan) {
+        const planConfig = PLAN_CONFIGS[updates.plan];
+        updateData.feedbackLimit = planConfig.feedbackPerMonth;
+        updateData.projectLimit = planConfig.projects;
+        console.log(
+          `Updating plan limits for user ${userId}: ${updates.plan} (feedback: ${planConfig.feedbackPerMonth}, projects: ${planConfig.projects})`
+        );
+      }
 
-    // Update feedback visibility if plan changed
-    if (updates.plan && updates.plan !== subscription.plan) {
-      await this.updateFeedbackVisibility(userId);
+      await prisma.subscription.update({
+        where: { userId },
+        data: updateData,
+      });
+
+      console.log(`Subscription updated for user ${userId}:`, updates);
+
+      // Update feedback visibility if plan changed
+      if (updates.plan && updates.plan !== subscription.plan) {
+        console.log(
+          `Plan changed from ${subscription.plan} to ${updates.plan}, updating feedback visibility`
+        );
+        await this.updateFeedbackVisibility(userId);
+      }
+    } catch (error) {
+      console.error(`Error updating subscription for user ${userId}:`, error);
+      throw error;
     }
   }
 

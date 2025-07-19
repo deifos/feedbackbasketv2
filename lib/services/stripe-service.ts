@@ -126,6 +126,11 @@ export class StripeService {
         metadata: {
           userId,
         },
+        subscription_data: {
+          metadata: {
+            userId,
+          },
+        },
       });
 
       return session;
@@ -181,6 +186,10 @@ export class StripeService {
           await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
           break;
 
+        case 'charge.succeeded':
+          await this.handleChargeSucceeded(event.data.object as Stripe.Charge);
+          break;
+
         case 'checkout.session.completed':
           await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
           break;
@@ -210,18 +219,48 @@ export class StripeService {
       return;
     }
 
+    // Debug the subscription object
+    const sub = subscription as any; // Type assertion to access all properties
+    console.log('Subscription object debug:', {
+      id: subscription.id,
+      current_period_start: sub.current_period_start,
+      current_period_end: sub.current_period_end,
+      status: subscription.status,
+      created: sub.created,
+      keys: Object.keys(subscription),
+      fullObject: JSON.stringify(subscription, null, 2),
+    });
+
+    // Validate dates before creating Date objects
+    let periodStart = sub.current_period_start;
+    let periodEnd = sub.current_period_end;
+
+    // If period dates are missing or invalid, use fallback logic
+    if (!periodStart || !periodEnd || periodStart === 0 || periodEnd === 0) {
+      console.warn('Missing or invalid period dates, using fallback logic');
+
+      // Use created date as base, or current time if that's also missing
+      const baseTime = sub.created || Math.floor(Date.now() / 1000);
+      periodStart = baseTime;
+      periodEnd = baseTime + 30 * 24 * 60 * 60; // 30 days later
+
+      console.log('Using fallback dates:', {
+        originalStart: sub.current_period_start,
+        originalEnd: sub.current_period_end,
+        fallbackStart: periodStart,
+        fallbackEnd: periodEnd,
+        baseTime,
+      });
+    }
+
     await subscriptionService.createSubscription(
       userId,
       plan,
       subscription.customer as string,
       subscription.id,
       subscription.items.data[0].price.id,
-      new Date(
-        (subscription as unknown as { current_period_start: number }).current_period_start * 1000
-      ),
-      new Date(
-        (subscription as unknown as { current_period_end: number }).current_period_end * 1000
-      )
+      new Date(periodStart * 1000),
+      new Date(periodEnd * 1000)
     );
   }
 
@@ -241,11 +280,33 @@ export class StripeService {
       return;
     }
 
-    const newPeriodStart = new Date(
-      (subscription as unknown as { current_period_start: number }).current_period_start * 1000
-    );
-    const newPeriodEnd = new Date(
-      (subscription as unknown as { current_period_end: number }).current_period_end * 1000
+    // Validate dates before creating Date objects
+    const sub = subscription as any; // Type assertion to access all properties
+    let periodStart = sub.current_period_start;
+    let periodEnd = sub.current_period_end;
+
+    // If period dates are missing or invalid, use fallback logic
+    if (!periodStart || !periodEnd || periodStart === 0 || periodEnd === 0) {
+      console.warn('Missing or invalid period dates in update, using fallback logic');
+
+      // Use created date as base, or current time if that's also missing
+      const baseTime = sub.created || Math.floor(Date.now() / 1000);
+      periodStart = baseTime;
+      periodEnd = baseTime + 30 * 24 * 60 * 60; // 30 days later
+
+      console.log('Using fallback dates for update:', {
+        originalStart: sub.current_period_start,
+        originalEnd: sub.current_period_end,
+        fallbackStart: periodStart,
+        fallbackEnd: periodEnd,
+      });
+    }
+
+    const newPeriodStart = new Date(periodStart * 1000);
+    const newPeriodEnd = new Date(periodEnd * 1000);
+
+    console.log(
+      `Updating subscription for user ${userId}: plan=${plan}, status=${subscription.status}`
     );
 
     // Get current subscription to check for plan changes and billing period transitions
@@ -268,6 +329,8 @@ export class StripeService {
       currentPeriodStart: newPeriodStart,
       currentPeriodEnd: newPeriodEnd,
     });
+
+    console.log(`Subscription updated successfully for user ${userId}`);
 
     // Handle billing period transition (new billing cycle started)
     if (isPeriodTransition) {
@@ -303,7 +366,7 @@ export class StripeService {
 
     try {
       // Get subscription and user information
-      const subscriptionId = (invoice as unknown as { subscription: string }).subscription;
+      const subscriptionId = (invoice as any).subscription as string;
       if (!subscriptionId) {
         console.warn('No subscription ID found in successful payment invoice');
         return;
@@ -337,10 +400,8 @@ export class StripeService {
           invoice.id!,
           'SUCCEEDED',
           new Date(
-            (invoice as unknown as { status_transitions?: { paid_at?: number } }).status_transitions
-              ?.paid_at
-              ? (invoice as unknown as { status_transitions: { paid_at: number } })
-                  .status_transitions.paid_at * 1000
+            (invoice as any).status_transitions?.paid_at
+              ? (invoice as any).status_transitions.paid_at * 1000
               : Date.now()
           )
         );
@@ -348,7 +409,7 @@ export class StripeService {
         // Create new payment record
         await paymentService.createPaymentRecord(userId, {
           stripeInvoiceId: invoice.id!,
-          stripePaymentIntentId: (invoice as unknown as { payment_intent: string }).payment_intent,
+          stripePaymentIntentId: (invoice as any).payment_intent as string,
           stripeSubscriptionId: subscriptionId,
           amount: invoice.amount_paid || 0,
           currency: invoice.currency || 'usd',
@@ -356,10 +417,8 @@ export class StripeService {
           planAtPayment: plan,
           billingCycle,
           paidAt: new Date(
-            (invoice as unknown as { status_transitions?: { paid_at?: number } }).status_transitions
-              ?.paid_at
-              ? (invoice as unknown as { status_transitions: { paid_at: number } })
-                  .status_transitions.paid_at * 1000
+            (invoice as any).status_transitions?.paid_at
+              ? (invoice as any).status_transitions.paid_at * 1000
               : Date.now()
           ),
           description: invoice.description || `${plan} plan - ${billingCycle}`,
@@ -371,10 +430,34 @@ export class StripeService {
   }
 
   /**
+   * Handle charge succeeded event (alternative to invoice.payment_succeeded)
+   */
+  private async handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
+    console.log(`Charge succeeded: ${charge.id}`);
+
+    try {
+      // Get invoice from charge
+      const invoiceId = (charge as any).invoice as string;
+      if (!invoiceId) {
+        console.log('No invoice ID found in charge, skipping payment record creation');
+        return;
+      }
+
+      // Retrieve the invoice to get subscription details
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+
+      // Delegate to the invoice payment succeeded handler
+      await this.handlePaymentSucceeded(invoice);
+    } catch (error) {
+      console.error('Error handling charge succeeded:', error);
+    }
+  }
+
+  /**
    * Handle failed payment
    */
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = (invoice as unknown as { subscription: string }).subscription;
+    const subscriptionId = (invoice as any).subscription as string;
     if (!subscriptionId) {
       console.warn('No subscription ID found in failed payment invoice');
       return;
@@ -391,9 +474,7 @@ export class StripeService {
 
       // Update payment record with failure
       const existingPayment = await paymentService.getPaymentByInvoiceId(invoice.id!);
-      const failureReason =
-        (invoice as unknown as { last_finalization_error?: { message?: string } })
-          .last_finalization_error?.message || 'Payment failed';
+      const failureReason = (invoice as any).last_finalization_error?.message || 'Payment failed';
 
       if (existingPayment) {
         await paymentService.updatePaymentStatus(invoice.id!, 'FAILED', undefined, failureReason);
@@ -407,8 +488,7 @@ export class StripeService {
 
           await paymentService.createPaymentRecord(userId, {
             stripeInvoiceId: invoice.id!,
-            stripePaymentIntentId: (invoice as unknown as { payment_intent: string })
-              .payment_intent,
+            stripePaymentIntentId: (invoice as any).payment_intent as string,
             stripeSubscriptionId: subscriptionId,
             amount: invoice.amount_due || 0,
             currency: invoice.currency || 'usd',
@@ -422,8 +502,7 @@ export class StripeService {
       }
 
       // Check if this is an initial payment failure (subscription might not exist in our DB yet)
-      const _currentUsage = await subscriptionService.getCurrentUsage(userId);
-      
+
       // Get the subscription from the database to check stripe subscription ID
       const dbSubscription = await prisma.subscription.findUnique({
         where: { userId },
@@ -454,8 +533,27 @@ export class StripeService {
       return;
     }
 
-    // The subscription.created event will handle the actual subscription creation
-    console.log(`Checkout completed for user: ${userId}`);
+    console.log(`Checkout completed for user: ${userId}, session: ${session.id}`);
+
+    // If this is a subscription checkout, the subscription.created/updated event will handle the actual subscription creation
+    if (session.mode === 'subscription' && session.subscription) {
+      console.log(`Subscription checkout completed: ${session.subscription}`);
+
+      // Fetch the subscription to ensure we have the latest data
+      try {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+        console.log(
+          `Retrieved subscription for checkout: ${subscription.id}, status: ${subscription.status}`
+        );
+
+        // Handle the subscription creation/update
+        if (subscription.status === 'active') {
+          await this.handleSubscriptionUpdated(subscription);
+        }
+      } catch (error) {
+        console.error('Error retrieving subscription after checkout:', error);
+      }
+    }
   }
 
   /**
