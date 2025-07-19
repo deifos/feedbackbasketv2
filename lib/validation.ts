@@ -21,7 +21,7 @@ export const projectSchema = z.object({
     }, 'URL must use HTTP or HTTPS protocol'),
   description: z
     .string()
-    .max(500, 'Description must be less than 500 characters')
+    .max(4000, 'Description must be less than 4000 characters')
     .trim()
     .optional(),
 });

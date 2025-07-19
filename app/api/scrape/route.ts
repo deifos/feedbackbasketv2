@@ -41,7 +41,7 @@ Focus on:
 Website Content:
 ${markdown}
 
-Generate only the description, no additional text or formatting.`,
+Generate only the description, no additional text or formatting, description should not be more than 3000 characters`,
     });
 
     return text.trim();
