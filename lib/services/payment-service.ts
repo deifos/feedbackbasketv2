@@ -48,8 +48,12 @@ export class PaymentService {
       failureReason?: string;
     }
   ): Promise<void> {
+    console.log('🔥 PAYMENT SERVICE: Creating payment record');
+    console.log('User ID:', userId);
+    console.log('Invoice data:', invoiceData);
+
     try {
-      await prisma.payment.create({
+      const result = await prisma.payment.create({
         data: {
           userId,
           stripeInvoiceId: invoiceData.stripeInvoiceId,
@@ -66,9 +70,18 @@ export class PaymentService {
         },
       });
 
-      console.log(`Payment record created for user ${userId}, invoice ${invoiceData.stripeInvoiceId}`);
+      console.log('✅ PAYMENT RECORD CREATED IN DATABASE!');
+      console.log('Payment ID:', result.id);
+      console.log(
+        `Payment record created for user ${userId}, invoice ${invoiceData.stripeInvoiceId}`
+      );
     } catch (error) {
-      console.error('Error creating payment record:', error);
+      console.error('❌ ERROR CREATING PAYMENT RECORD:', error);
+      console.error('Error details:', {
+        userId,
+        invoiceData,
+        error: error instanceof Error ? error.message : error,
+      });
       throw error;
     }
   }
@@ -109,15 +122,7 @@ export class PaymentService {
     hasMore: boolean;
   }> {
     try {
-      const {
-        userId,
-        status,
-        planAtPayment,
-        dateFrom,
-        dateTo,
-        limit = 50,
-        offset = 0,
-      } = filters;
+      const { userId, status, planAtPayment, dateFrom, dateTo, limit = 50, offset = 0 } = filters;
 
       // Build where clause
       const whereClause: Record<string, unknown> = {};
@@ -193,12 +198,7 @@ export class PaymentService {
     planBreakdown: Record<SubscriptionPlan, { count: number; revenue: number }>;
   }> {
     try {
-      const [
-        totalStats,
-        _successfulStats,
-        _failedStats,
-        planStats,
-      ] = await Promise.all([
+      const [totalStats, _successfulStats, _failedStats, planStats] = await Promise.all([
         // Total payments and revenue
         prisma.payment.aggregate({
           _count: { id: true },

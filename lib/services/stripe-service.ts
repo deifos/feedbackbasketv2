@@ -179,14 +179,17 @@ export class StripeService {
           break;
 
         case 'invoice.payment_succeeded':
+          console.log('🔥 INVOICE PAYMENT SUCCEEDED - Processing payment record');
           await this.handlePaymentSucceeded(event.data.object as Stripe.Invoice);
           break;
 
         case 'invoice.payment_failed':
+          console.log('❌ INVOICE PAYMENT FAILED - Processing failed payment');
           await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
           break;
 
         case 'charge.succeeded':
+          console.log('💳 CHARGE SUCCEEDED - Processing charge payment');
           await this.handleChargeSucceeded(event.data.object as Stripe.Charge);
           break;
 
@@ -362,18 +365,39 @@ export class StripeService {
    * Handle successful payment
    */
   private async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-    console.log(`Payment succeeded for invoice: ${invoice.id}`);
+    console.log(`🔥 PAYMENT SUCCEEDED HANDLER: ${invoice.id}`);
+    console.log('Invoice amount_paid:', (invoice as any).amount_paid);
+    console.log('Invoice currency:', invoice.currency);
 
     try {
       // Get subscription and user information
-      const subscriptionId = (invoice as any).subscription as string;
+      let subscriptionId = (invoice as any).subscription as string;
+      console.log('Subscription ID from invoice:', subscriptionId);
+
+      // If no direct subscription ID, try to get it from line items
       if (!subscriptionId) {
-        console.warn('No subscription ID found in successful payment invoice');
+        console.log('🔍 No direct subscription ID, checking line items...');
+        const lines = (invoice as any).lines?.data || [];
+        for (const line of lines) {
+          if (line.subscription) {
+            subscriptionId = line.subscription;
+            console.log('✅ Found subscription ID in line item:', subscriptionId);
+            break;
+          }
+        }
+      }
+
+      if (!subscriptionId) {
+        console.warn('❌ No subscription ID found in invoice or line items');
+        console.log('Invoice object keys:', Object.keys(invoice));
+        console.log('Invoice lines:', (invoice as any).lines?.data || []);
         return;
       }
 
+      console.log('📋 Retrieving subscription:', subscriptionId);
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const userId = subscription.metadata?.userId;
+      console.log('User ID from subscription metadata:', userId);
 
       if (!userId) {
         console.error('No userId found in subscription metadata for payment');
@@ -392,10 +416,13 @@ export class StripeService {
       const billingCycle = isAnnual ? 'annual' : 'monthly';
 
       // Update existing payment record or create new one
+      console.log('🔍 Checking for existing payment record...');
       const existingPayment = await paymentService.getPaymentByInvoiceId(invoice.id!);
+      console.log('Existing payment found:', !!existingPayment);
 
       if (existingPayment) {
         // Update existing record
+        console.log('📝 Updating existing payment record');
         await paymentService.updatePaymentStatus(
           invoice.id!,
           'SUCCEEDED',
@@ -405,8 +432,18 @@ export class StripeService {
               : Date.now()
           )
         );
+        console.log('✅ Payment record updated successfully');
       } else {
         // Create new payment record
+        console.log('🆕 Creating new payment record for user:', userId);
+        console.log('Payment data:', {
+          invoiceId: invoice.id,
+          amount: (invoice as any).amount_paid || 0,
+          currency: invoice.currency,
+          plan,
+          billingCycle,
+        });
+
         await paymentService.createPaymentRecord(userId, {
           stripeInvoiceId: invoice.id!,
           stripePaymentIntentId: (invoice as any).payment_intent as string,
@@ -423,6 +460,7 @@ export class StripeService {
           ),
           description: invoice.description || `${plan} plan - ${billingCycle}`,
         });
+        console.log('✅ NEW PAYMENT RECORD CREATED SUCCESSFULLY!');
       }
     } catch (error) {
       console.error('Error handling successful payment:', error);
@@ -433,23 +471,70 @@ export class StripeService {
    * Handle charge succeeded event (alternative to invoice.payment_succeeded)
    */
   private async handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
-    console.log(`Charge succeeded: ${charge.id}`);
+    console.log(`🔥 CHARGE SUCCEEDED HANDLER: ${charge.id}`);
+    console.log('Charge object keys:', Object.keys(charge));
+    console.log('Charge amount:', charge.amount);
+    console.log('Charge currency:', charge.currency);
 
     try {
-      // Get invoice from charge
-      const invoiceId = (charge as any).invoice as string;
-      if (!invoiceId) {
-        console.log('No invoice ID found in charge, skipping payment record creation');
+      // For subscription charges, we need to find the subscription through the customer
+      const customerId = charge.customer as string;
+      if (!customerId) {
+        console.log('❌ No customer ID found in charge');
         return;
       }
 
-      // Retrieve the invoice to get subscription details
-      const invoice = await stripe.invoices.retrieve(invoiceId);
+      console.log('🔍 Finding subscription for customer:', customerId);
 
-      // Delegate to the invoice payment succeeded handler
-      await this.handlePaymentSucceeded(invoice);
+      // Get the most recent active subscription for this customer
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        limit: 1,
+      });
+
+      if (subscriptions.data.length === 0) {
+        console.log('❌ No active subscription found for customer');
+        return;
+      }
+
+      const subscription = subscriptions.data[0];
+      const userId = subscription.metadata?.userId;
+
+      if (!userId) {
+        console.log('❌ No userId found in subscription metadata');
+        return;
+      }
+
+      console.log('✅ Found subscription and user:', { subscriptionId: subscription.id, userId });
+
+      // Create payment record directly from charge data
+      const plan = this.getPlanFromPriceId(subscription.items.data[0].price.id);
+      if (!plan) {
+        console.log('❌ Unknown price ID:', subscription.items.data[0].price.id);
+        return;
+      }
+
+      const planConfig = PLAN_CONFIGS[plan];
+      const isAnnual = subscription.items.data[0].price.id === planConfig.stripePriceIds.annual;
+      const billingCycle = isAnnual ? 'annual' : 'monthly';
+
+      console.log('🆕 Creating payment record from charge data');
+      await paymentService.createPaymentRecord(userId, {
+        stripeInvoiceId: `charge_${charge.id}`, // Use charge ID as invoice ID since we don't have invoice
+        stripePaymentIntentId: (charge as any).payment_intent as string,
+        stripeSubscriptionId: subscription.id,
+        amount: charge.amount,
+        currency: charge.currency,
+        status: 'SUCCEEDED',
+        planAtPayment: plan,
+        billingCycle,
+        paidAt: new Date(charge.created * 1000),
+        description: charge.description || `${plan} plan - ${billingCycle}`,
+      });
+      console.log('✅ Payment record created from charge data');
     } catch (error) {
-      console.error('Error handling charge succeeded:', error);
+      console.error('❌ Error handling charge succeeded:', error);
     }
   }
 
