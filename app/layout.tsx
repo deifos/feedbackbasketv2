@@ -32,7 +32,7 @@ export default function RootLayout({
 
         {/* Feedback Widget */}
         <FeedbackWidget
-          projectId="cmdah106i0001sbsoh21p58f6"
+          projectId="cmdalaunm0001l7046cj64j7r"
           apiEndpoint="http://localhost:3000/api/widget/feedback"
           buttonColor="#3b82f6"
           buttonRadius={8}
