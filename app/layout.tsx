@@ -31,9 +31,10 @@ export default function RootLayout({
         <ErrorBoundary>{children}</ErrorBoundary>
 
         {/* Feedback Widget */}
+        {/* TODO: Simplify this process, maybe 1 url to fetch eveyrthing else. */}
         <FeedbackWidget
           projectId="cmdalaunm0001l7046cj64j7r"
-          apiEndpoint="http://localhost:3000/api/widget/feedback"
+          apiEndpoint="https://www.feedbackbasket.com/api/widget/feedback"
           buttonColor="#3b82f6"
           buttonRadius={8}
           buttonLabel="Feedback"
