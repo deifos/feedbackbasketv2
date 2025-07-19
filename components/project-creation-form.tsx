@@ -107,6 +107,16 @@ export function ProjectCreationForm({
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Project creation failed:', errorData);
+
+        // Show detailed validation errors if available
+        if (errorData.details && Array.isArray(errorData.details)) {
+          const errorMessages = errorData.details
+            .map((detail: any) => `${detail.field}: ${detail.message}`)
+            .join(', ');
+          throw new Error(`Validation failed: ${errorMessages}`);
+        }
+
         throw new Error(errorData.message || 'Failed to create project');
       }
 

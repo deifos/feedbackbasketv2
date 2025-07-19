@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 
 // POST /api/widget/feedback - Submit feedback (public endpoint)
 export async function POST(request: NextRequest) {
+  console.log('POST /api/widget/feedback - Submit feedback (public endpoint)');
   try {
     // Apply rate limiting first
     const rateLimitResult = rateLimitFeedback(request);
