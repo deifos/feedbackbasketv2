@@ -39,7 +39,8 @@ export const feedbackSchema = z.object({
     .email('Please enter a valid email address')
     .max(254, 'Email must be less than 254 characters')
     .optional()
-    .or(z.literal('')),
+    .or(z.literal(''))
+    .or(z.null()),
 });
 
 // Feedback update schema (for status, notes, and manual overrides)
