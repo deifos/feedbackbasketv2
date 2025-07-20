@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     // Get the base URL for the widget API
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     // Generate the widget configuration
     const widgetConfig = {
