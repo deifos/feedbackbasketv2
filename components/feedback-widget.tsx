@@ -2,11 +2,18 @@
 
 import Script from 'next/script';
 
-// Extend the Window interface to include FeedbackWidget
-// @TODO: Look into how to make this simpler and offer script templates
-//
+// Extend the Window interface to include the new feedbackBasket pattern
 declare global {
   interface Window {
+    __feedbackBasket?: {
+      projectId: string;
+      apiEndpoint: string;
+      buttonColor: string;
+      buttonRadius: number;
+      buttonLabel: string;
+      introMessage: string;
+      successMessage: string;
+    };
     FeedbackWidget?: {
       init: (config: {
         projectId: string;
@@ -41,25 +48,28 @@ export function FeedbackWidget({
   successMessage = 'Thank you for your feedback!',
 }: FeedbackWidgetProps) {
   return (
-    <>
-      <Script
-        src="/widget/feedback-widget.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          // Initialize the widget after the script has loaded
-          if (window.FeedbackWidget) {
-            window.FeedbackWidget.init({
-              projectId: projectId,
-              apiEndpoint: apiEndpoint,
-              buttonColor: buttonColor,
-              buttonRadius: buttonRadius,
-              buttonLabel: buttonLabel,
-              introMessage: introMessage,
-              successMessage: successMessage,
-            });
-          }
-        }}
-      />
-    </>
+    <Script
+      id="feedback-widget"
+      strategy="afterInteractive"
+      dangerouslySetInnerHTML={{
+        __html: `
+          (function () {
+            window.__feedbackBasket = {
+              projectId: '${projectId}',
+              apiEndpoint: '${apiEndpoint}',
+              buttonColor: '${buttonColor}',
+              buttonRadius: ${buttonRadius},
+              buttonLabel: '${buttonLabel.replace(/'/g, "\\'")}',
+              introMessage: '${introMessage.replace(/'/g, "\\'")}',
+              successMessage: '${successMessage.replace(/'/g, "\\'")}'
+            };
+            const s = document.createElement('script');
+            s.src = '/widget/feedback-widget.js';
+            s.async = true;
+            document.head.appendChild(s);
+          })();
+        `,
+      }}
+    />
   );
 }
