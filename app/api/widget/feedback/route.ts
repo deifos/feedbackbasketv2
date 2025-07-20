@@ -10,6 +10,44 @@ import { feedbackVisibilityService } from '@/lib/services/feedback-visibility-se
 
 const prisma = new PrismaClient();
 
+// Simple domain validation - check if request comes from registered project URL
+function isValidOrigin(origin: string | null, referer: string | null, projectUrl: string): boolean {
+  // Allow localhost for development
+  if (process.env.NODE_ENV === 'development') {
+    const devDomains = ['localhost', '127.0.0.1', '0.0.0.0'];
+    const checkDomain = origin || referer || '';
+    if (devDomains.some(dev => checkDomain.includes(dev))) {
+      return true;
+    }
+  }
+
+  try {
+    // Extract domain from registered project URL
+    const projectDomain = new URL(projectUrl).hostname;
+
+    // Check origin header first (most reliable)
+    if (origin) {
+      const originDomain = new URL(origin).hostname;
+      if (originDomain === projectDomain || originDomain.endsWith(`.${projectDomain}`)) {
+        return true;
+      }
+    }
+
+    // Fallback to referer header
+    if (referer) {
+      const refererDomain = new URL(referer).hostname;
+      if (refererDomain === projectDomain || refererDomain.endsWith(`.${projectDomain}`)) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.warn('Domain validation error:', error);
+    return false; // Reject if we can't validate
+  }
+}
+
 // POST /api/widget/feedback - Submit feedback (public endpoint)
 export async function POST(request: NextRequest) {
   console.log('POST /api/widget/feedback - Submit feedback (public endpoint)');
@@ -91,6 +129,41 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get('x-real-ip');
     const ipAddress = forwarded?.split(',')[0] || realIp || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    // Security: Validate that feedback comes from the registered project URL
+    const origin = request.headers.get('origin');
+    const referer = request.headers.get('referer');
+
+    if (!isValidOrigin(origin, referer, project.url)) {
+      console.warn('Unauthorized feedback submission:', {
+        projectId,
+        projectUrl: project.url,
+        origin,
+        referer,
+        ipAddress,
+        timestamp: new Date().toISOString(),
+      });
+
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          message: 'Feedback submission not allowed from this domain',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Additional rate limiting per project to prevent spam
+    const projectRateLimit = checkProjectRateLimit(projectId, ipAddress);
+    if (!projectRateLimit.isAllowed) {
+      return NextResponse.json(
+        {
+          error: 'Project Rate Limit Exceeded',
+          message: 'Too many feedback submissions for this project. Please try again later.',
+        },
+        { status: 429 }
+      );
+    }
 
     // Perform AI analysis of the feedback content
     let aiAnalysis = null;
@@ -208,4 +281,32 @@ export async function OPTIONS(_request: NextRequest) {
       'Access-Control-Max-Age': '86400',
     },
   });
+}
+
+// Simple in-memory rate limiting per project
+const projectRateLimits = new Map<string, { count: number; resetTime: number }>();
+
+function checkProjectRateLimit(projectId: string, ipAddress: string): { isAllowed: boolean } {
+  const key = `${projectId}:${ipAddress}`;
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute window
+  const maxRequests = 10; // Max 10 feedback per project per IP per minute
+
+  const current = projectRateLimits.get(key);
+
+  if (!current || now > current.resetTime) {
+    // Reset or initialize
+    projectRateLimits.set(key, { count: 1, resetTime: now + windowMs });
+    return { isAllowed: true };
+  }
+
+  if (current.count >= maxRequests) {
+    return { isAllowed: false };
+  }
+
+  // Increment count
+  current.count++;
+  projectRateLimits.set(key, current);
+
+  return { isAllowed: true };
 }
