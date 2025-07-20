@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { sanitizeProjectName } from '@/lib/sanitization';
-
-const prisma = new PrismaClient();
 
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -103,7 +101,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json(updatedProject);
   } catch (error) {
-    console.error('Error updating project:', error);
+    console.error('Database error:', error);
 
     // Handle Prisma unique constraint violations
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
@@ -113,12 +111,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       );
     }
 
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to update project' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }
 
@@ -164,13 +157,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json(project);
   } catch (error) {
-    console.error('Error fetching project:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to fetch project' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error('Database error:', error);
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }
 
@@ -216,12 +204,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       message: 'Project deleted successfully',
     });
   } catch (error) {
-    console.error('Error deleting project:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to delete project' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error('Database error:', error);
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }

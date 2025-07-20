@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { feedbackUpdateSchema } from '@/lib/validation';
 import { sanitizeNotes } from '@/lib/sanitization';
-
-const prisma = new PrismaClient();
 
 // PUT /api/feedback/[id] - Update feedback status or notes
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -125,7 +123,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json(updatedFeedback);
   } catch (error) {
-    console.error('Error updating feedback:', error);
+    console.error('Database error updating feedback:', error);
 
     // Handle Prisma record not found
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
@@ -135,12 +133,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       );
     }
 
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to update feedback' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }
 
@@ -189,7 +182,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
 
     return NextResponse.json({ message: 'Feedback deleted successfully' }, { status: 200 });
   } catch (error) {
-    console.error('Error deleting feedback:', error);
+    console.error('Database error deleting feedback:', error);
 
     // Handle Prisma record not found
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
@@ -199,11 +192,6 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       );
     }
 
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to delete feedback' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { ProjectCustomizationInput } from '@/lib/validation';
 // import { CustomizationUpdateRequest } from '@/lib/types/api';
-
-const prisma = new PrismaClient();
 
 // GET /api/projects/[id]/customization - Get project customization
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -60,13 +58,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json(project.customization);
   } catch (error) {
-    console.error('Error fetching project customization:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to fetch project customization' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error('Database error in GET /api/projects/[id]/customization:', error);
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }
 
@@ -218,12 +211,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json(customization);
   } catch (error) {
-    console.error('Error updating project customization:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to update project customization' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error('Database error in PUT /api/projects/[id]/customization:', error);
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }

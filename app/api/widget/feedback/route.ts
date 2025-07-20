@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { feedbackSchema } from '@/lib/validation';
 import { sanitizeFeedbackContent, sanitizeEmail } from '@/lib/sanitization';
 import { rateLimitFeedback } from '@/lib/rate-limit';
@@ -7,8 +7,6 @@ import { analyzeFeedbackWithAI } from '@/lib/ai-analysis';
 // import { subscriptionService } from '@/lib/services/subscription-service';
 import { usageTrackingService } from '@/lib/services/usage-tracking-service';
 import { feedbackVisibilityService } from '@/lib/services/feedback-visibility-service';
-
-const prisma = new PrismaClient();
 
 // Helper function to get CORS headers
 function getCorsHeaders(allowedOrigin?: string) {
@@ -273,7 +271,7 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Error submitting feedback:', error);
+    console.error('Database error:', error);
 
     // Handle specific Prisma errors
     if (error && typeof error === 'object' && 'code' in error) {
@@ -299,14 +297,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to submit feedback' },
+      { error: 'Database connection failed' },
       {
         status: 500,
         headers: getCorsHeaders(),
       }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 // import { ScriptGenerationResponse, WidgetConfig } from '@/lib/types/api';
-
-const prisma = new PrismaClient();
 
 // GET /api/projects/[id]/script - Generate widget script
 export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -113,12 +111,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
 
     return NextResponse.json(instructions);
   } catch (error) {
-    console.error('Error generating widget script:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to generate widget script' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error('Database error:', error);
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }
