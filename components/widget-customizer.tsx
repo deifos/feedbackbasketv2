@@ -1,6 +1,5 @@
 'use client';
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,48 +20,73 @@ export function WidgetCustomizer({
   onUpdate,
   onPreviewUpdate,
 }: WidgetCustomizerProps) {
-  // Initialize state from props
-  const [customization, setCustomization] = useState<CustomizationUpdateRequest>(() => ({
-    buttonColor: initialCustomization?.buttonColor || '#3b82f6',
-    buttonRadius: initialCustomization?.buttonRadius || 8,
-    buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
+  // Helper function to create default customization
+  const createDefaultCustomization = (
+    initial?: ProjectCustomization
+  ): CustomizationUpdateRequest => ({
+    buttonColor: initial?.buttonColor || '#3b82f6',
+    buttonRadius: initial?.buttonRadius || 8,
+    buttonLabel: initial?.buttonLabel || 'Feedback',
     introMessage:
-      initialCustomization?.introMessage ||
-      "We'd love to hear your thoughts! Your feedback helps us improve.",
-    successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
-  }));
+      initial?.introMessage || "We'd love to hear your thoughts! Your feedback helps us improve.",
+    successMessage: initial?.successMessage || 'Thank you for your feedback!',
+  });
+
+  // Track the last seen initialCustomization to detect changes
+  const [lastInitialCustomization, setLastInitialCustomization] = useState(initialCustomization);
+
+  // Derive the default state from props
+  const defaultCustomization = useMemo(
+    () => createDefaultCustomization(initialCustomization),
+    [initialCustomization]
+  );
+
+  // Initialize or reset state when initialCustomization changes
+  const [customization, setCustomization] = useState<CustomizationUpdateRequest>(() =>
+    createDefaultCustomization(initialCustomization)
+  );
+
+  // Handle prop changes during render (React's recommended approach)
+  if (initialCustomization !== lastInitialCustomization) {
+    setLastInitialCustomization(initialCustomization);
+    setCustomization(defaultCustomization);
+  }
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const initialCustomizationRef = useRef(initialCustomization);
 
-  // Update state only when initialCustomization prop changes from external source
-  useEffect(() => {
-    if (initialCustomization !== initialCustomizationRef.current) {
-      initialCustomizationRef.current = initialCustomization;
-      setCustomization({
-        buttonColor: initialCustomization?.buttonColor || '#3b82f6',
-        buttonRadius: initialCustomization?.buttonRadius || 8,
-        buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
-        introMessage:
-          initialCustomization?.introMessage ||
-          "We'd love to hear your thoughts! Your feedback helps us improve.",
-        successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
-      });
-    }
-  }, [initialCustomization]);
+  // Debounce preview updates to avoid excessive calls
+  const debouncedPreviewUpdate = useCallback(
+    debounce((field: keyof CustomizationUpdateRequest, value: string | number) => {
+      onPreviewUpdate?.(field, value);
+    }, 100),
+    [onPreviewUpdate]
+  );
 
-  const handleInputChange = (field: keyof CustomizationUpdateRequest, value: string | number) => {
-    setCustomization(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-    setError(null);
-    setSuccess(false);
+  const handleInputChange = useCallback(
+    (field: keyof CustomizationUpdateRequest, value: string | number) => {
+      setCustomization(prev => ({
+        ...prev,
+        [field]: value,
+      }));
+      setError(null);
+      setSuccess(false);
 
-    // Update preview in real-time
-    onPreviewUpdate?.(field, value);
-  };
+      // Update preview with debouncing for performance
+      debouncedPreviewUpdate(field, value);
+    },
+    [debouncedPreviewUpdate]
+  );
+
+  // Simple debounce implementation
+  function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+    let timeout: NodeJS.Timeout;
+    return ((...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    }) as T;
+  }
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -97,13 +121,7 @@ export function WidgetCustomizer({
   };
 
   const handleReset = () => {
-    setCustomization({
-      buttonColor: '#3b82f6',
-      buttonRadius: 8,
-      buttonLabel: 'Feedback',
-      introMessage: "We'd love to hear your thoughts! Your feedback helps us improve.",
-      successMessage: 'Thank you for your feedback!',
-    });
+    setCustomization(createDefaultCustomization());
     setError(null);
     setSuccess(false);
   };

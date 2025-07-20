@@ -10,6 +10,15 @@ import { feedbackVisibilityService } from '@/lib/services/feedback-visibility-se
 
 const prisma = new PrismaClient();
 
+// Helper function to get CORS headers
+function getCorsHeaders(allowedOrigin?: string) {
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin || '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
 // Simple domain validation - check if request comes from registered project URL
 function isValidOrigin(origin: string | null, referer: string | null, projectUrl: string): boolean {
   // Allow localhost for development
@@ -67,6 +76,7 @@ export async function POST(request: NextRequest) {
             'X-RateLimit-Limit': '5',
             'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
             'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
+            ...getCorsHeaders(),
           },
         }
       );
@@ -89,7 +99,10 @@ export async function POST(request: NextRequest) {
           message: 'Invalid input data',
           details: errors,
         },
-        { status: 400 }
+        {
+          status: 400,
+          headers: getCorsHeaders(),
+        }
       );
     }
 
@@ -106,7 +119,10 @@ export async function POST(request: NextRequest) {
           error: 'Validation Error',
           message: 'Feedback content cannot be empty after sanitization',
         },
-        { status: 400 }
+        {
+          status: 400,
+          headers: getCorsHeaders(),
+        }
       );
     }
 
@@ -120,7 +136,10 @@ export async function POST(request: NextRequest) {
     if (!project) {
       return NextResponse.json(
         { error: 'Not Found', message: 'Project not found' },
-        { status: 404 }
+        {
+          status: 404,
+          headers: getCorsHeaders(),
+        }
       );
     }
 
@@ -149,9 +168,15 @@ export async function POST(request: NextRequest) {
           error: 'Unauthorized',
           message: 'Feedback submission not allowed from this domain',
         },
-        { status: 403 }
+        {
+          status: 403,
+          headers: getCorsHeaders(),
+        }
       );
     }
+
+    // Determine the allowed origin for CORS headers - use specific origin when available
+    const allowedOrigin = origin || (referer ? new URL(referer).origin : undefined);
 
     // Additional rate limiting per project to prevent spam
     const projectRateLimit = checkProjectRateLimit(projectId, ipAddress);
@@ -161,7 +186,10 @@ export async function POST(request: NextRequest) {
           error: 'Project Rate Limit Exceeded',
           message: 'Too many feedback submissions for this project. Please try again later.',
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: getCorsHeaders(allowedOrigin),
+        }
       );
     }
 
@@ -226,7 +254,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the feedback submission if visibility handling fails
     }
 
-    // Return success response
+    // Return success response with CORS headers
     return NextResponse.json(
       {
         success: true,
@@ -239,7 +267,10 @@ export async function POST(request: NextRequest) {
           sentiment: feedback.sentiment,
         },
       },
-      { status: 201 }
+      {
+        status: 201,
+        headers: getCorsHeaders(allowedOrigin),
+      }
     );
   } catch (error) {
     console.error('Error submitting feedback:', error);
@@ -249,21 +280,30 @@ export async function POST(request: NextRequest) {
       if (error.code === 'P2002') {
         return NextResponse.json(
           { error: 'Conflict', message: 'Duplicate feedback submission detected' },
-          { status: 409 }
+          {
+            status: 409,
+            headers: getCorsHeaders(),
+          }
         );
       }
 
       if (error.code === 'P2003') {
         return NextResponse.json(
           { error: 'Invalid Reference', message: 'Invalid project reference' },
-          { status: 400 }
+          {
+            status: 400,
+            headers: getCorsHeaders(),
+          }
         );
       }
     }
 
     return NextResponse.json(
       { error: 'Internal Server Error', message: 'Failed to submit feedback' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: getCorsHeaders(),
+      }
     );
   } finally {
     await prisma.$disconnect();
