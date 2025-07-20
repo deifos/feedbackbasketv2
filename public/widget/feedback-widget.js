@@ -497,8 +497,18 @@
     },
   };
 
-  // Auto-initialize if config is provided via data attributes
+  // Auto-initialize using window.__feedbackBasket configuration
   function autoInit() {
+    // Check for modern configuration pattern
+    if (window.__feedbackBasket) {
+      const config = window.__feedbackBasket;
+      if (config.projectId && config.apiEndpoint) {
+        window.FeedbackWidget.init(config);
+        return;
+      }
+    }
+
+    // Fallback: check for data attributes on script tag
     const scripts = document.getElementsByTagName('script');
     for (let i = 0; i < scripts.length; i++) {
       const script = scripts[i];

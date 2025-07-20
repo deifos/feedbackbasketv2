@@ -12,7 +12,28 @@ interface ScriptInstallationGuideProps {
   project: Project & {
     customization: ProjectCustomization | null;
   };
-  scriptData: {
+  scriptResponse?: {
+    script: string;
+    installation: {
+      title: string;
+      steps: Array<{
+        step: number;
+        title: string;
+        description: string;
+      }>;
+      notes: string[];
+    };
+    config: {
+      projectId: string;
+      apiEndpoint: string;
+      buttonColor: string;
+      buttonRadius: number;
+      buttonLabel: string;
+      introMessage: string;
+      successMessage: string;
+    };
+  };
+  scriptData?: {
     projectId: string;
     apiEndpoint: string;
     buttonColor: string;
@@ -30,34 +51,44 @@ interface ScriptInstallationGuideProps {
 
 export function ScriptInstallationGuide({
   project,
+  scriptResponse,
   scriptData,
   user: _user,
 }: ScriptInstallationGuideProps) {
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedCdn, setCopiedCdn] = useState(false);
 
-  // Generate the embed script
-  const embedScript = `<script>
+  // Use scriptResponse if available, otherwise fall back to scriptData
+  const config = scriptResponse?.config || scriptData;
+
+  if (!config) {
+    return <div>Error: No script configuration available</div>;
+  }
+
+  // Use the new script format from API response, or generate fallback
+  const embedScript =
+    scriptResponse?.script ||
+    `<script>
   window.FeedbackWidget.init({
-    projectId: '${scriptData.projectId}',
-    apiEndpoint: '${scriptData.apiEndpoint}',
-    buttonColor: '${scriptData.buttonColor}',
-    buttonRadius: ${scriptData.buttonRadius},
-    buttonLabel: '${scriptData.buttonLabel}',
-    introMessage: '${scriptData.introMessage}',
-    successMessage: '${scriptData.successMessage}'
+    projectId: '${config.projectId}',
+    apiEndpoint: '${config.apiEndpoint}',
+    buttonColor: '${config.buttonColor}',
+    buttonRadius: ${config.buttonRadius},
+    buttonLabel: '${config.buttonLabel}',
+    introMessage: '${config.introMessage}',
+    successMessage: '${config.successMessage}'
   });
 </script>
-<script src="${scriptData.apiEndpoint.replace('/api/widget/feedback', '')}/widget/feedback-widget.js"></script>`;
+<script src="${config.apiEndpoint.replace('/api/widget/feedback', '')}/widget/feedback-widget.js"></script>`;
 
   // Generate the CDN version (simplified)
-  const cdnScript = `<script src="${scriptData.apiEndpoint.replace('/api/widget/feedback', '')}/widget/feedback-widget.js" 
-        data-project-id="${scriptData.projectId}"
-        data-api-endpoint="${scriptData.apiEndpoint}"
-        data-button-color="${scriptData.buttonColor}"
-        data-button-radius="${scriptData.buttonRadius}"
-        data-button-label="${scriptData.buttonLabel}"
-        data-success-message="${scriptData.successMessage}">
+  const cdnScript = `<script src="${config.apiEndpoint.replace('/api/widget/feedback', '')}/widget/feedback-widget.js" 
+        data-project-id="${config.projectId}"
+        data-api-endpoint="${config.apiEndpoint}"
+        data-button-color="${config.buttonColor}"
+        data-button-radius="${config.buttonRadius}"
+        data-button-label="${config.buttonLabel}"
+        data-success-message="${config.successMessage}">
 </script>`;
 
   const copyToClipboard = async (text: string, type: 'script' | 'cdn') => {
@@ -177,16 +208,35 @@ export function ScriptInstallationGuide({
                       </div>
 
                       <div className="bg-blue-50 p-4 rounded-lg">
-                        <h4 className="font-semibold text-blue-900 mb-2">Installation Steps:</h4>
+                        <h4 className="font-semibold text-blue-900 mb-2">
+                          {scriptResponse?.installation.title || 'Installation Steps:'}
+                        </h4>
                         <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
-                          <li>Copy the embed code above</li>
-                          <li>Open your website&apos;s HTML file</li>
-                          <li>
-                            Paste the code just before the closing <code>&lt;/body&gt;</code> tag
-                          </li>
-                          <li>Save and upload your changes</li>
-                          <li>Visit your website to see the feedback widget!</li>
+                          {scriptResponse?.installation.steps.map(step => (
+                            <li key={step.step}>{step.description}</li>
+                          )) || (
+                            <>
+                              <li>Copy the embed code above</li>
+                              <li>Open your website&apos;s HTML file</li>
+                              <li>
+                                Paste the code just before the closing <code>&lt;/body&gt;</code>{' '}
+                                tag
+                              </li>
+                              <li>Save and upload your changes</li>
+                              <li>Visit your website to see the feedback widget!</li>
+                            </>
+                          )}
                         </ol>
+                        {scriptResponse?.installation.notes && (
+                          <div className="mt-4">
+                            <h5 className="font-medium text-blue-900 mb-2">Important Notes:</h5>
+                            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                              {scriptResponse.installation.notes.map((note, index) => (
+                                <li key={index}>{note}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>
@@ -304,8 +354,8 @@ export function ScriptInstallationGuide({
                     <div
                       className="inline-flex items-center gap-2 px-3 py-2 text-sm text-white font-medium shadow-lg cursor-pointer"
                       style={{
-                        backgroundColor: scriptData.buttonColor,
-                        borderRadius: `${scriptData.buttonRadius}px`,
+                        backgroundColor: config.buttonColor,
+                        borderRadius: `${config.buttonRadius}px`,
                       }}
                     >
                       <svg
@@ -318,7 +368,7 @@ export function ScriptInstallationGuide({
                       >
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                       </svg>
-                      {scriptData.buttonLabel}
+                      {config.buttonLabel}
                     </div>
                   </div>
                 </div>
@@ -329,18 +379,18 @@ export function ScriptInstallationGuide({
                     <div className="flex items-center gap-2">
                       <div
                         className="w-4 h-4 rounded border"
-                        style={{ backgroundColor: scriptData.buttonColor }}
+                        style={{ backgroundColor: config.buttonColor }}
                       />
-                      <span className="font-mono">{scriptData.buttonColor}</span>
+                      <span className="font-mono">{config.buttonColor}</span>
                     </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Border Radius:</span>
-                    <span>{scriptData.buttonRadius}px</span>
+                    <span>{config.buttonRadius}px</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Button Label:</span>
-                    <span>&quot;{scriptData.buttonLabel}&quot;</span>
+                    <span>&quot;{config.buttonLabel}&quot;</span>
                   </div>
                 </div>
 
