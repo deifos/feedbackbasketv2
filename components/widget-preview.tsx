@@ -43,11 +43,11 @@ export function WidgetPreview({ customization }: WidgetPreviewProps) {
       </CardHeader>
       <CardContent>
         {/* Preview Container */}
-        <div className="relative bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-8 min-h-[300px]">
-          <div className="text-center text-gray-500 mb-4">
+        <div className="relative bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 min-h-[200px]">
+          <div className="text-center text-gray-500 mb-3">
             <p className="text-sm">Your website content would be here</p>
-            <div className="w-full h-32 bg-gray-100 rounded mt-2 flex items-center justify-center">
-              <span className="text-gray-400">Website Content</span>
+            <div className="w-full h-20 bg-gray-100 rounded mt-2 flex items-center justify-center">
+              <span className="text-gray-400 text-sm">Website Content</span>
             </div>
           </div>
 
@@ -161,13 +161,11 @@ export function WidgetPreview({ customization }: WidgetPreviewProps) {
         </div>
 
         {/* Preview Instructions */}
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
           <p className="font-medium mb-1">Preview Instructions:</p>
-          <ul className="list-disc list-inside space-y-1 text-blue-700">
-            <li>Click the feedback button to see the form</li>
-            <li>Try submitting feedback to see the success message</li>
-            <li>Changes to customization will update the preview in real-time</li>
-          </ul>
+          <p className="text-blue-700">
+            Click the feedback button to test the form and see your changes in real-time.
+          </p>
         </div>
       </CardContent>
     </Card>
