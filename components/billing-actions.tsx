@@ -55,6 +55,17 @@ export function BillingActions({ currentPlan }: BillingActionsProps) {
           >
             {loading ? 'Opening...' : 'Manage Subscription'}
           </Button>
+
+          {/* {status === 'CANCELED' && (
+            <div className="text-center">
+              <p className="text-sm text-orange-600 mb-2">
+                Subscription scheduled for cancellation
+              </p>
+              <Button className="w-full" onClick={handleManageSubscription} disabled={loading}>
+                {loading ? 'Opening...' : 'Reactivate Subscription'}
+              </Button>
+            </div>
+          )} */}
         </>
       ) : (
         <Button asChild className="w-full">
