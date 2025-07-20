@@ -156,6 +156,14 @@ export class StripeService {
       return session;
     } catch (error) {
       console.error('Error creating portal session:', error);
+
+      // Check if it's the configuration error
+      if (error instanceof Error && error.message.includes('No configuration provided')) {
+        throw new Error(
+          'Customer portal not configured. Please set up your Stripe Customer Portal in the dashboard.'
+        );
+      }
+
       throw new Error('Failed to create portal session');
     }
   }
@@ -171,10 +179,12 @@ export class StripeService {
           break;
 
         case 'customer.subscription.updated':
+          console.log('🔄 SUBSCRIPTION UPDATED - Checking for cancellation');
           await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
           break;
 
         case 'customer.subscription.deleted':
+          console.log('❌ SUBSCRIPTION DELETED - User will be downgraded to FREE');
           await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
 
@@ -308,8 +318,12 @@ export class StripeService {
     const newPeriodStart = new Date(periodStart * 1000);
     const newPeriodEnd = new Date(periodEnd * 1000);
 
+    // Check if subscription is scheduled for cancellation
+    const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
+    const cancelAt = (subscription as any).cancel_at;
+
     console.log(
-      `Updating subscription for user ${userId}: plan=${plan}, status=${subscription.status}`
+      `Updating subscription for user ${userId}: plan=${plan}, status=${subscription.status}, cancel_at_period_end=${cancelAtPeriodEnd}, cancel_at=${cancelAt}`
     );
 
     // Get current subscription to check for plan changes and billing period transitions
@@ -324,10 +338,17 @@ export class StripeService {
       currentUsage.billingPeriod.end &&
       newPeriodStart > currentUsage.billingPeriod.end;
 
+    // Determine the actual status based on cancellation
+    let actualStatus = this.mapStripeStatus(subscription.status);
+    if (cancelAtPeriodEnd && actualStatus === 'ACTIVE') {
+      actualStatus = 'CANCELED'; // Mark as canceled even though still active until period end
+      console.log(`🔄 Subscription scheduled for cancellation at period end`);
+    }
+
     // Update the subscription
     await subscriptionService.updateSubscription(userId, {
       plan,
-      status: this.mapStripeStatus(subscription.status),
+      status: actualStatus,
       stripePriceId: subscription.items.data[0].price.id,
       currentPeriodStart: newPeriodStart,
       currentPeriodEnd: newPeriodEnd,
@@ -358,7 +379,12 @@ export class StripeService {
       return;
     }
 
+    console.log(`🔥 CANCELLING SUBSCRIPTION for user: ${userId}`);
+    console.log('Subscription ID:', subscription.id);
+
     await subscriptionService.cancelSubscription(userId);
+
+    console.log(`✅ User ${userId} downgraded to FREE plan`);
   }
 
   /**

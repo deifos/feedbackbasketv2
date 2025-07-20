@@ -363,7 +363,21 @@ export function UsageDisplay({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Status:</span>
-                <span className="ml-2 font-medium text-green-600">Active</span>
+                <span
+                  className={`ml-2 font-medium ${
+                    usage.status === 'CANCELED'
+                      ? 'text-orange-600'
+                      : usage.status === 'ACTIVE'
+                        ? 'text-green-600'
+                        : 'text-gray-600'
+                  }`}
+                >
+                  {usage.status === 'CANCELED'
+                    ? 'Cancels at period end'
+                    : usage.status === 'ACTIVE'
+                      ? 'Active'
+                      : usage.status}
+                </span>
               </div>
               {usage.daysUntilReset > 0 && (
                 <div>
@@ -374,6 +388,29 @@ export function UsageDisplay({
                 </div>
               )}
             </div>
+
+            {/* Cancellation Notice */}
+            {usage.status === 'CANCELED' && (
+              <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <span className="text-orange-600">⚠️</span>
+                  </div>
+                  <div className="ml-2">
+                    <h5 className="text-sm font-medium text-orange-800">
+                      Subscription Scheduled for Cancellation
+                    </h5>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Your subscription will end on{' '}
+                      {usage.billingPeriod.end
+                        ? new Date(usage.billingPeriod.end).toLocaleDateString()
+                        : 'the end of your billing period'}
+                      . You&rsquo;ll be downgraded to the Free plan and your usage will be limited.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

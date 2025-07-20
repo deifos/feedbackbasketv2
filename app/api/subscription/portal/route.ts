@@ -27,7 +27,7 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'No active subscription found' }, { status: 404 });
     }
 
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
+    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/billing`;
 
     try {
       const portalSession = await stripeService.createPortalSession(
@@ -40,6 +40,19 @@ export async function POST(_request: NextRequest) {
       });
     } catch (error) {
       console.error('Error creating portal session:', error);
+
+      // Check if it's the configuration error
+      if (error instanceof Error && error.message.includes('Customer portal not configured')) {
+        return NextResponse.json(
+          {
+            error: 'Customer portal not configured',
+            message: 'Please configure your Stripe Customer Portal in the dashboard first.',
+            configUrl: 'https://billing.stripe.com/p/login/test_eVqeVf6YBfQrgt32j387K00',
+          },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 });
     }
   } catch (error) {

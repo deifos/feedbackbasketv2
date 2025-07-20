@@ -77,7 +77,7 @@ export default async function BillingPage() {
               </div>
 
               <div className="pt-4 border-t">
-                <BillingActions currentPlan={usage.currentPlan} />
+                <BillingActions currentPlan={usage.currentPlan} status={usage.status} />
               </div>
             </CardContent>
           </Card>
