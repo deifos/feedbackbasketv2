@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,29 +21,36 @@ export function WidgetCustomizer({
   onUpdate,
   onPreviewUpdate,
 }: WidgetCustomizerProps) {
-  // Derive initial state from props using useMemo
-  const initialState = useMemo(
-    () => ({
-      buttonColor: initialCustomization?.buttonColor || '#3b82f6',
-      buttonRadius: initialCustomization?.buttonRadius || 8,
-      buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
-      introMessage:
-        initialCustomization?.introMessage ||
-        "We'd love to hear your thoughts! Your feedback helps us improve.",
-      successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
-    }),
-    [initialCustomization]
-  );
-
-  const [customization, setCustomization] = useState<CustomizationUpdateRequest>(initialState);
+  // Initialize state from props
+  const [customization, setCustomization] = useState<CustomizationUpdateRequest>(() => ({
+    buttonColor: initialCustomization?.buttonColor || '#3b82f6',
+    buttonRadius: initialCustomization?.buttonRadius || 8,
+    buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
+    introMessage:
+      initialCustomization?.introMessage ||
+      "We'd love to hear your thoughts! Your feedback helps us improve.",
+    successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
+  }));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const initialCustomizationRef = useRef(initialCustomization);
 
-  // Update state when initialState changes (when initialCustomization prop changes)
-  if (JSON.stringify(customization) !== JSON.stringify(initialState)) {
-    setCustomization(initialState);
-  }
+  // Update state only when initialCustomization prop changes from external source
+  useEffect(() => {
+    if (initialCustomization !== initialCustomizationRef.current) {
+      initialCustomizationRef.current = initialCustomization;
+      setCustomization({
+        buttonColor: initialCustomization?.buttonColor || '#3b82f6',
+        buttonRadius: initialCustomization?.buttonRadius || 8,
+        buttonLabel: initialCustomization?.buttonLabel || 'Feedback',
+        introMessage:
+          initialCustomization?.introMessage ||
+          "We'd love to hear your thoughts! Your feedback helps us improve.",
+        successMessage: initialCustomization?.successMessage || 'Thank you for your feedback!',
+      });
+    }
+  }, [initialCustomization]);
 
   const handleInputChange = (field: keyof CustomizationUpdateRequest, value: string | number) => {
     setCustomization(prev => ({
