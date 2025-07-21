@@ -101,26 +101,6 @@ export default async function ProjectPage(props: ProjectPageProps) {
       { positive: 0, neutral: 0, negative: 0 }
     );
 
-    // Calculate needsAttention from feedback that is NOT marked as done
-    const needsAttentionCount = recentFeedback.reduce((count, feedback) => {
-      if (feedback.status === 'DONE') return count; // Skip feedback marked as done
-
-      const effectiveCategory =
-        feedback.categoryOverridden && feedback.manualCategory
-          ? feedback.manualCategory
-          : feedback.category;
-
-      const effectiveSentiment =
-        feedback.sentimentOverridden && feedback.manualSentiment
-          ? feedback.manualSentiment
-          : feedback.sentiment;
-
-      if (effectiveCategory === 'BUG' || effectiveSentiment === 'NEGATIVE') {
-        return count + 1;
-      }
-
-      return count;
-    }, 0);
 
     const stats = {
       total: feedbackStats.reduce((sum, stat) => sum + stat._count.id, 0),
@@ -134,7 +114,7 @@ export default async function ProjectPage(props: ProjectPageProps) {
       positive: sentimentStats.positive,
       neutral: sentimentStats.neutral,
       negative: sentimentStats.negative,
-      needsAttention: needsAttentionCount, // Items that need immediate attention (excludes done items)
+      // needsAttention will be calculated by calculateEnhancedStats in project-dashboard.tsx
     };
 
     // Add feedback to project object for compatibility
