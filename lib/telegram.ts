@@ -11,13 +11,121 @@ interface TelegramNotificationData {
 class TelegramService {
   private bot: TelegramBot | null = null;
   private isPolling = false;
+  private useWebhook = false;
 
   constructor() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (token) {
       this.bot = new TelegramBot(token);
+      
+      // Check if we should use webhook mode
+      this.useWebhook = process.env.TELEGRAM_USE_WEBHOOK === 'true';
+      
+      if (this.useWebhook) {
+        this.setupWebhook();
+      } else {
+        this.startPolling();
+      }
+    }
+  }
+
+  /**
+   * Setup webhook for receiving Telegram updates
+   */
+  private async setupWebhook() {
+    if (!this.bot) return;
+    
+    try {
+      const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;
+      if (!webhookUrl) {
+        console.error('TELEGRAM_WEBHOOK_URL not configured, falling back to polling');
+        this.useWebhook = false;
+        this.startPolling();
+        return;
+      }
+
+      const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+      await this.bot.setWebHook(webhookUrl, {
+        secret_token: secretToken,
+      });
+      
+      console.log(`Telegram webhook set to: ${webhookUrl}`);
+    } catch (error) {
+      console.error('Error setting up Telegram webhook:', error);
+      console.log('Falling back to polling mode');
+      this.useWebhook = false;
       this.startPolling();
     }
+  }
+
+  /**
+   * Handle incoming webhook updates from Telegram
+   */
+  async handleWebhookUpdate(update: any): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!update.message) {
+        return { success: true }; // Not a message update, ignore
+      }
+
+      const message = update.message;
+      const chatId = message.chat.id;
+      const text = message.text;
+
+      if (!text) {
+        return { success: true }; // Not a text message, ignore
+      }
+
+      // Handle /start command
+      if (text === '/start') {
+        await this.handleStartCommand(chatId);
+        return { success: true };
+      }
+
+      // Handle /chatid command
+      if (text === '/chatid') {
+        await this.handleChatIdCommand(chatId);
+        return { success: true };
+      }
+
+      // Handle /link command
+      const linkMatch = text.match(/^\/link\s+(.+)$/);
+      if (linkMatch) {
+        const linkCode = linkMatch[1].trim();
+        await this.handleLinkCommand(chatId, linkCode);
+        return { success: true };
+      }
+
+      return { success: true }; // Unknown command, ignore
+    } catch (error: any) {
+      console.error('Error handling webhook update:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Handle /start command
+   */
+  private async handleStartCommand(chatId: number) {
+    const welcomeMessage = `🎉 Welcome to FeedbackBasket notifications!
+
+To link your account:
+1. Generate a link code in your FeedbackBasket settings
+2. Send the command: /link YOUR_CODE
+3. You'll start receiving notifications for your projects
+
+Commands:
+/start - Show this welcome message
+/link <code> - Link your account with the provided code
+/chatid - Get your Chat ID for manual setup`;
+
+    await this.bot?.sendMessage(chatId, welcomeMessage);
+  }
+
+  /**
+   * Handle /chatid command
+   */
+  private async handleChatIdCommand(chatId: number) {
+    await this.bot?.sendMessage(chatId, `Your Chat ID is: ${chatId}\n\nYou can use this Chat ID instead of your username in FeedbackBasket settings for more reliable notifications.`);
   }
 
   /**
@@ -33,25 +141,13 @@ class TelegramService {
       // Handle /start command
       this.bot.onText(/\/start/, (msg) => {
         const chatId = msg.chat.id;
-        const welcomeMessage = `🎉 Welcome to FeedbackBasket notifications!
-
-To link your account:
-1. Generate a link code in your FeedbackBasket settings
-2. Send the command: /link YOUR_CODE
-3. You'll start receiving notifications for your projects
-
-Commands:
-/start - Show this welcome message
-/link <code> - Link your account with the provided code
-/chatid - Get your Chat ID for manual setup`;
-
-        this.bot?.sendMessage(chatId, welcomeMessage);
+        this.handleStartCommand(chatId);
       });
 
       // Handle /chatid command
       this.bot.onText(/\/chatid/, (msg) => {
         const chatId = msg.chat.id;
-        this.bot?.sendMessage(chatId, `Your Chat ID is: ${chatId}\n\nYou can use this Chat ID instead of your username in FeedbackBasket settings for more reliable notifications.`);
+        this.handleChatIdCommand(chatId);
       });
 
       // Handle /link command
@@ -336,6 +432,56 @@ Your Chat ID (${chatId}) has been saved to your account for reliable message del
         error: error.message || 'Failed to get bot info' 
       };
     }
+  }
+
+  /**
+   * Get current webhook info
+   */
+  async getWebhookInfo(): Promise<{ success: boolean; webhookInfo?: any; error?: string }> {
+    if (!this.bot) {
+      return { success: false, error: 'Telegram bot not configured' };
+    }
+
+    try {
+      const webhookInfo = await this.bot.getWebHookInfo();
+      return { success: true, webhookInfo };
+    } catch (error: any) {
+      console.error('Get webhook info error:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to get webhook info' 
+      };
+    }
+  }
+
+  /**
+   * Remove webhook and switch to polling
+   */
+  async removeWebhook(): Promise<{ success: boolean; error?: string }> {
+    if (!this.bot) {
+      return { success: false, error: 'Telegram bot not configured' };
+    }
+
+    try {
+      await this.bot.deleteWebHook();
+      this.useWebhook = false;
+      this.startPolling();
+      return { success: true };
+    } catch (error: any) {
+      console.error('Remove webhook error:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to remove webhook' 
+      };
+    }
+  }
+
+  /**
+   * Get current mode (polling or webhook)
+   */
+  getMode(): 'polling' | 'webhook' | 'not_configured' {
+    if (!this.bot) return 'not_configured';
+    return this.useWebhook ? 'webhook' : 'polling';
   }
 }
 
