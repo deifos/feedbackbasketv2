@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Settings, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Settings, CreditCard, Zap } from 'lucide-react';
 
 import {
   Sidebar,
@@ -32,6 +32,11 @@ const items = [
     title: 'Dashboard',
     url: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Integrations',
+    url: '/integrations',
+    icon: Zap,
   },
   {
     title: 'Account',

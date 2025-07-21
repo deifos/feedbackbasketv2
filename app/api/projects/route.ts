@@ -68,7 +68,7 @@ export async function GET(_request: NextRequest) {
       },
     }));
 
-    return NextResponse.json(projectsWithCounts);
+    return NextResponse.json({ projects: projectsWithCounts });
   } catch (error) {
     logError(error, 'GET /api/projects');
     const apiError = handleApiError(error);

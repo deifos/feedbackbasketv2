@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { FeedbackWidget } from '@/components/feedback-widget';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { Toaster } from '@/components/ui/sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ErrorBoundary>{children}</ErrorBoundary>
+        <Toaster />
 
         {/* Feedback Widget */}
         {/* TODO: Simplify this process, maybe 1 url to fetch eveyrthing else. */}

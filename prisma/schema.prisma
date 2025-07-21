@@ -23,6 +23,13 @@ model User {
   image         String?
   createdAt     DateTime
   updatedAt     DateTime
+  
+  // Telegram integration
+  telegramHandle String?   // User's Telegram handle (e.g., @username)
+  telegramChatId String?   // User's Telegram Chat ID (captured from bot interaction)
+  telegramLinkCode String? // Temporary code for linking Telegram account
+  telegramLinkCodeExp DateTime? // Expiration time for the link code
+  
   sessions      Session[]
   accounts      Account[]
   projects      Project[]
@@ -95,6 +102,9 @@ model Project {
   scrapedMetadata  Json?    // Raw scraped metadata from Firecrawl
   aiGenerated      Boolean  @default(false) // Whether description is AI-generated
   lastAnalyzedAt   DateTime? // When last analyzed with AI
+
+  // Telegram notifications
+  telegramNotifications Boolean @default(true) // Enable/disable Telegram notifications for this project
 
   customization ProjectCustomization?
   feedback      Feedback[]

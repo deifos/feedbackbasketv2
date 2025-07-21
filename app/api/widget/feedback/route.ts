@@ -7,6 +7,7 @@ import { analyzeFeedbackWithAI } from '@/lib/ai-analysis';
 // import { subscriptionService } from '@/lib/services/subscription-service';
 import { usageTrackingService } from '@/lib/services/usage-tracking-service';
 import { feedbackVisibilityService } from '@/lib/services/feedback-visibility-service';
+import telegramService from '@/lib/telegram';
 
 // Helper function to get CORS headers
 function getCorsHeaders(allowedOrigin?: string) {
@@ -124,11 +125,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify that the project exists
+    // Verify that the project exists and get user's telegram settings
     const project = await prisma.project.findUnique({
       where: {
         id: projectId,
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            telegramHandle: true,
+            telegramChatId: true,
+          }
+        }
+      }
     });
 
     if (!project) {
@@ -250,6 +260,22 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Failed to handle feedback visibility:', error);
       // Don't fail the feedback submission if visibility handling fails
+    }
+
+    // Send Telegram notification if configured and enabled for this project
+    if (project.telegramNotifications && (project.user.telegramHandle || project.user.telegramChatId)) {
+      try {
+        await telegramService.sendFeedbackNotification(project.user.id, {
+          projectName: project.name,
+          feedbackContent: sanitizedContent,
+          feedbackId: feedback.id,
+          projectUrl: project.url
+        });
+        console.log(`Telegram notification sent for feedback ${feedback.id}`);
+      } catch (error) {
+        console.error('Failed to send Telegram notification:', error);
+        // Don't fail the feedback submission if notification fails
+      }
     }
 
     // Return success response with CORS headers
