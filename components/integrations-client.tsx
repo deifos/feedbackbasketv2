@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Settings, Trash2, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { Send, Settings, Trash2, CheckCircle, AlertCircle, Loader2, ExternalLink, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Project {
@@ -44,11 +44,12 @@ export function IntegrationsClient({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [handleSaved, setHandleSaved] = useState(!!initialTelegramHandle);
-  const [isLinked, setIsLinked] = useState(false); // Only true after successful linking via bot
+  const [isLinked, setIsLinked] = useState(() => !!initialTelegramChatId); // Only true after successful linking via bot
   const [linkCode, setLinkCode] = useState<string | null>(null);
   const [linkCodeExpiration, setLinkCodeExpiration] = useState<Date | null>(null);
   const [linkCodeLoading, setLinkCodeLoading] = useState(false);
   const [showLinkFlow, setShowLinkFlow] = useState(false);
+  const [linkCommandCopied, setLinkCommandCopied] = useState(false);
 
   // Validate handle format as user types
   const validateHandleFormat = (handle: string) => {
@@ -92,7 +93,7 @@ export function IntegrationsClient({
   };
 
   // Function to refresh projects from server
-  const refreshProjects = async () => {
+  const refreshProjects = useCallback(async () => {
     try {
       const response = await fetch('/api/projects');
       if (response.ok) {
@@ -108,7 +109,7 @@ export function IntegrationsClient({
     } catch (error) {
       console.error('Error refreshing projects:', error);
     }
-  };
+  }, []);
 
   const handleSaveTelegramHandle = async () => {
     if (!telegramHandle.trim()) {
@@ -271,7 +272,7 @@ export function IntegrationsClient({
   };
 
   // Check link status
-  const checkLinkStatus = async () => {
+  const checkLinkStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/integrations/telegram/link-code');
       const data = await response.json();
@@ -303,12 +304,31 @@ export function IntegrationsClient({
     } catch (error) {
       console.error('Error checking link status:', error);
     }
-  };
+  }, [isLinked, initialTelegramHandle, refreshProjects]);
 
   // Check if link code has expired
-  const isLinkCodeExpired = () => {
+  const isLinkCodeExpired = useCallback(() => {
     return linkCodeExpiration && new Date() > linkCodeExpiration;
-  };
+  }, [linkCodeExpiration]);
+
+  // Copy link command to clipboard
+  const copyLinkCommand = useCallback(async () => {
+    if (!linkCode) return;
+    
+    try {
+      await navigator.clipboard.writeText(`/link ${linkCode}`);
+      setLinkCommandCopied(true);
+      toast.success('Link command copied to clipboard!');
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setLinkCommandCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      toast.error('Failed to copy to clipboard');
+    }
+  }, [linkCode]);
 
   // Effect to periodically check link status when code is active
   useEffect(() => {
@@ -325,20 +345,16 @@ export function IntegrationsClient({
         clearInterval(interval);
       }
     };
-  }, [linkCode, showLinkFlow, isLinked]);
+  }, [linkCode, showLinkFlow, isLinked, checkLinkStatus, isLinkCodeExpired]);
 
-  // Check link status on component mount
+  // Initialize link status check on mount
   useEffect(() => {
-    // Set initial linked state ONLY if Chat ID exists (from bot linking)
-    if (initialTelegramChatId) {
-      setIsLinked(true);
-    }
-    // Don't check link status if we already have a manual handle saved
+    // Don't check link status if we already have a manual handle saved or chat ID
     // This prevents the "linked" message from showing for manual configs
-    if (!initialTelegramHandle) {
+    if (!initialTelegramHandle && !initialTelegramChatId) {
       checkLinkStatus();
     }
-  }, []);
+  }, [initialTelegramHandle, initialTelegramChatId, checkLinkStatus]);
 
   // Account is configured if either:
   // 1. Manual setup is tested and working (isConnected && handleSaved)
@@ -474,9 +490,27 @@ export function IntegrationsClient({
                           
                           <div>
                             <p className="font-medium">Next steps:</p>
-                            <ol className="list-decimal list-inside mt-1 space-y-1 text-sm">
+                            <ol className="list-decimal list-inside mt-1 space-y-2 text-sm">
                               <li>Open your chat with @FeedbackBasketNotifyBot</li>
-                              <li>Send: <code className="bg-white px-1 rounded">/link {linkCode}</code></li>
+                              <li className="flex items-center gap-2">
+                                <span>Send this command:</span>
+                                <div className="flex items-center gap-2 bg-white px-2 py-1 rounded border">
+                                  <code className="text-sm font-mono">/link {linkCode}</code>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 hover:bg-gray-100"
+                                    onClick={copyLinkCommand}
+                                    title="Copy to clipboard"
+                                  >
+                                    {linkCommandCopied ? (
+                                      <Check className="h-3 w-3 text-green-600" />
+                                    ) : (
+                                      <Copy className="h-3 w-3 text-gray-500" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </li>
                               <li>The bot will confirm your account is linked</li>
                             </ol>
                           </div>

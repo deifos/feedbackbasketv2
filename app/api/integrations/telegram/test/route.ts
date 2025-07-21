@@ -33,6 +33,14 @@ export async function POST(request: NextRequest) {
 
       // Use Chat ID if available (more reliable), otherwise fall back to handle
       const testTarget = user.telegramChatId || user.telegramHandle;
+      
+      if (!testTarget) {
+        return NextResponse.json({
+          success: false,
+          error: 'No Telegram handle or Chat ID found'
+        }, { status: 400 });
+      }
+      
       const testResult = await telegramService.sendTestMessage(testTarget);
       
       return NextResponse.json({
