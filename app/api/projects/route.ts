@@ -73,8 +73,6 @@ export async function GET(_request: NextRequest) {
     logError(error, 'GET /api/projects');
     const apiError = handleApiError(error);
     return NextResponse.json(apiError, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -261,7 +259,5 @@ export async function POST(request: NextRequest) {
       { error: 'Internal Server Error', message: 'Failed to create project' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

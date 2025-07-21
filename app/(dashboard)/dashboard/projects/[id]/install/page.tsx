@@ -1,10 +1,8 @@
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { ScriptInstallationGuide } from '@/components/script-installation-guide';
-
-const prisma = new PrismaClient();
 
 interface InstallPageProps {
   params: Promise<{
@@ -54,8 +52,6 @@ export default async function InstallPage(props: InstallPageProps) {
     }
 
     const scriptResponse = await response.json();
-
-    await prisma.$disconnect();
 
     return (
       <ScriptInstallationGuide
@@ -131,8 +127,6 @@ export default async function InstallPage(props: InstallPageProps) {
       },
       config: widgetConfig,
     };
-
-    await prisma.$disconnect();
 
     return (
       <ScriptInstallationGuide

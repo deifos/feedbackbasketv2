@@ -1,10 +1,8 @@
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { WidgetCustomizationPage } from '@/components/widget-customization-page';
-
-const prisma = new PrismaClient();
 
 interface CustomizePageProps {
   params: Promise<{
@@ -36,8 +34,6 @@ export default async function CustomizePage(props: CustomizePageProps) {
   if (!project) {
     redirect('/dashboard');
   }
-
-  await prisma.$disconnect();
 
   return (
     <WidgetCustomizationPage

@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { DashboardOverview } from '@/components/dashboard-overview';
 import { UpgradeStatusHandler } from '@/components/upgrade-status-handler';
 
@@ -13,8 +13,6 @@ export default async function DashboardPage() {
   if (!session) {
     redirect('/sign-in');
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Fetch user's projects with feedback counts
@@ -103,7 +101,8 @@ export default async function DashboardPage() {
         <DashboardOverview data={dashboardData} />
       </>
     );
-  } finally {
-    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    throw error;
   }
 }

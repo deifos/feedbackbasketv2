@@ -1,10 +1,8 @@
 import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { PrismaClient } from '@/app/generated/prisma';
+import prisma from '@/lib/prisma';
 import { OnboardingFlow } from '@/components/onboarding-flow';
-
-const prisma = new PrismaClient();
 
 export default async function OnboardingPage() {
   const session = await auth.api.getSession({
@@ -26,8 +24,6 @@ export default async function OnboardingPage() {
   if (existingProjects > 0) {
     redirect('/dashboard');
   }
-
-  await prisma.$disconnect();
 
   return <OnboardingFlow user={session.user} />;
 }
