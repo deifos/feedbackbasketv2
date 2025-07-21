@@ -48,8 +48,10 @@ export function calculateEnhancedStats(
     f => f.sentiment === 'NEGATIVE' || (f.sentimentOverridden && f.manualSentiment === 'NEGATIVE')
   ).length;
 
-  // Calculate items that need attention (negative sentiment + bugs)
+  // Calculate items that need attention (negative sentiment + bugs) - exclude DONE items
   const needsAttention = feedback.filter(f => {
+    if (f.status === 'DONE') return false; // Skip feedback marked as done
+    
     const effectiveSentiment =
       f.sentimentOverridden && f.manualSentiment ? f.manualSentiment : f.sentiment;
     const effectiveCategory =
