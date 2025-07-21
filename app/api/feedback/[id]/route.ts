@@ -85,8 +85,12 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }> = {};
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) {
-      const sanitizedNotes = sanitizeNotes(notes);
-      updateData.notes = sanitizedNotes || null;
+      if (notes === null) {
+        updateData.notes = null;
+      } else {
+        const sanitizedNotes = sanitizeNotes(notes);
+        updateData.notes = sanitizedNotes || null;
+      }
     }
 
     // Handle manual overrides for AI analysis

@@ -14,10 +14,20 @@ import {
   Frown,
   Meh,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Feedback } from '@/app/generated/prisma';
 import {
   getEffectiveCategory,
@@ -30,7 +40,8 @@ interface FeedbackItemProps {
   feedback: Feedback;
   isSelected?: boolean;
   onSelect?: () => void;
-  onNotesUpdate: (feedbackId: string, notes: string) => void;
+  onNotesUpdate: (feedbackId: string, notes: string) => Promise<void>;
+  onDelete?: (feedbackId: string) => void;
 }
 
 export function FeedbackItem({
@@ -38,6 +49,7 @@ export function FeedbackItem({
   isSelected = false,
   onSelect,
   onNotesUpdate,
+  onDelete,
 }: FeedbackItemProps) {
   const router = useRouter();
   const [editingNotes, setEditingNotes] = useState(false);
@@ -45,6 +57,11 @@ export function FeedbackItem({
   const [updatingCategory, setUpdatingCategory] = useState(false);
   const [updatingSentiment, setUpdatingSentiment] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteNoteDialog, setShowDeleteNoteDialog] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [isDeletingNote, setIsDeletingNote] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -59,9 +76,17 @@ export function FeedbackItem({
     }
   };
 
-  const handleNotesUpdate = () => {
-    onNotesUpdate(feedback.id, noteText);
-    setEditingNotes(false);
+  const handleNotesUpdate = async () => {
+    setIsSavingNote(true);
+    try {
+      await onNotesUpdate(feedback.id, noteText);
+      // Only close editing mode after successful save
+      setEditingNotes(false);
+      setIsSavingNote(false);
+    } catch (error) {
+      console.error('Error saving note:', error);
+      setIsSavingNote(false);
+    }
   };
 
   const handleNotesCancel = () => {
@@ -91,6 +116,55 @@ export function FeedbackItem({
     } catch (error) {
       console.error('Error updating status:', error);
       setUpdatingStatus(null);
+    }
+  };
+
+  const handleDeleteFeedback = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/feedback/${feedback.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setShowDeleteDialog(false);
+        if (onDelete) {
+          onDelete(feedback.id);
+        } else {
+          router.refresh();
+        }
+      } else {
+        console.error('Failed to delete feedback');
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteNote = async () => {
+    setIsDeletingNote(true);
+    try {
+      const response = await fetch(`/api/feedback/${feedback.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notes: null }),
+      });
+
+      if (response.ok) {
+        setShowDeleteNoteDialog(false);
+        setNoteText('');
+        router.refresh();
+      } else {
+        console.error('Failed to delete note');
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    } finally {
+      setIsDeletingNote(false);
     }
   };
 
@@ -358,23 +432,93 @@ export function FeedbackItem({
           </div>
         )}
 
+        {/* Delete Feedback Button */}
+        <div className="border-t pt-4 pb-4 flex justify-end">
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete Feedback
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Feedback</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete this feedback? This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteFeedback}
+                  disabled={isDeleting}
+                >
+                  {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
         {/* Notes Section */}
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-medium text-gray-700">Private Notes</h4>
-            {!editingNotes && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setEditingNotes(true);
-                  setNoteText(feedback.notes || '');
-                }}
-              >
-                <Edit3 className="w-4 h-4 mr-1" />
-                {feedback.notes ? 'Edit' : 'Add'} Notes
-              </Button>
-            )}
+            <div className="flex items-center space-x-2">
+              {!editingNotes && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingNotes(true);
+                    setNoteText(feedback.notes || '');
+                  }}
+                >
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  {feedback.notes ? 'Edit' : 'Add'} Notes
+                </Button>
+              )}
+              {feedback.notes && !editingNotes && (
+                <Dialog open={showDeleteNoteDialog} onOpenChange={setShowDeleteNoteDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete Note
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete Note</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to delete this note? This action cannot be undone.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowDeleteNoteDialog(false)}
+                        disabled={isDeletingNote}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleDeleteNote}
+                        disabled={isDeletingNote}
+                      >
+                        {isDeletingNote && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {isDeletingNote ? 'Deleting...' : 'Delete Note'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </div>
 
           {editingNotes ? (
@@ -386,11 +530,11 @@ export function FeedbackItem({
                 className="w-full p-2 border border-gray-300 rounded-md resize-none h-20 text-sm"
               />
               <div className="flex space-x-2">
-                <Button size="sm" onClick={handleNotesUpdate}>
-                  <Check className="w-4 h-4 mr-1" />
-                  Save
+                <Button size="sm" onClick={handleNotesUpdate} disabled={isSavingNote}>
+                  {isSavingNote ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                  {isSavingNote ? 'Saving...' : 'Save'}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleNotesCancel}>
+                <Button variant="outline" size="sm" onClick={handleNotesCancel} disabled={isSavingNote}>
                   <X className="w-4 h-4 mr-1" />
                   Cancel
                 </Button>

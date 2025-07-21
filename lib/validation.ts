@@ -46,7 +46,7 @@ export const feedbackSchema = z.object({
 // Feedback update schema (for status, notes, and manual overrides)
 export const feedbackUpdateSchema = z.object({
   status: z.enum(['PENDING', 'REVIEWED', 'DONE']).optional(),
-  notes: z.string().max(1000, 'Notes must be less than 1000 characters').trim().optional(),
+  notes: z.string().max(1000, 'Notes must be less than 1000 characters').trim().optional().nullable(),
   manualCategory: z.enum(['BUG', 'FEATURE', 'REVIEW']).optional(),
   manualSentiment: z.enum(['POSITIVE', 'NEGATIVE', 'NEUTRAL']).optional(),
   categoryOverridden: z.boolean().optional(),

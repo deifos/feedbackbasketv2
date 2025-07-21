@@ -284,13 +284,14 @@ export function ProjectDashboard({ project, feedback, stats, user: _user }: Proj
                           feedback={item}
                           isSelected={selectedFeedbackIds.has(item.id)}
                           onSelect={() => handleSelectFeedback(item.id)}
-                          onNotesUpdate={(feedbackId, notes) => {
+                          onNotesUpdate={async (feedbackId, notes) => {
                             // Update notes via API
-                            fetch(`/api/feedback/${feedbackId}`, {
+                            await fetch(`/api/feedback/${feedbackId}`, {
                               method: 'PUT',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ notes }),
-                            }).then(() => window.location.reload());
+                            });
+                            window.location.reload();
                           }}
                         />
                       ))}
