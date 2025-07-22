@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { UsageDisplay } from '@/components/usage-display';
+import { ApiKeysClient } from '@/components/api-keys-client';
 import { headers } from 'next/headers';
 
 export default async function AccountPage() {
@@ -64,12 +65,8 @@ export default async function AccountPage() {
                   </div>
                   <div className="text-xs text-gray-500">Coming Soon</div>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">API Access</p>
-                    <p className="text-xs text-gray-600">Manage your API keys</p>
-                  </div>
-                  <div className="text-xs text-gray-500">Coming Soon</div>
+                <div className="p-3 bg-gray-50 rounded-md">
+                  <ApiKeysClient />
                 </div>
               </div>
             </div>

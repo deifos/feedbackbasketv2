@@ -36,6 +36,7 @@ model User {
   subscription  Subscription?
   usagePeriods  UsagePeriod[]
   payments      Payment[]
+  apiKeys       ApiKey[]
 
   @@unique([email])
   @@map("user")
@@ -108,6 +109,7 @@ model Project {
 
   customization ProjectCustomization?
   feedback      Feedback[]
+  apiKeyAccess  ApiKeyProjectAccess[]
 
   // Performance indexes
   @@index([userId])
@@ -312,6 +314,50 @@ model Payment {
   @@index([paidAt])
   @@index([planAtPayment])
   @@map("payment")
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String   // e.g., "Claude Desktop", "Cursor IDE"
+  key       String   @unique // The actual API key (fb_key_...)
+  
+  // Project access control (similar to telegram notifications)
+  projectAccess ApiKeyProjectAccess[]
+  
+  // Usage tracking
+  lastUsed     DateTime?
+  usageCount   Int      @default(0)
+  
+  // Security
+  isActive     Boolean  @default(true)
+  scopes       String[] @default(["read:projects", "read:feedback"]) // Future extensibility
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([key])
+  @@index([userId, isActive])
+  @@map("api_key")
+}
+
+model ApiKeyProjectAccess {
+  id        String  @id @default(cuid())
+  apiKeyId  String
+  apiKey    ApiKey  @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  enabled   Boolean @default(true)
+  createdAt DateTime @default(now())
+  
+  @@unique([apiKeyId, projectId])
+  @@index([apiKeyId])
+  @@index([projectId])
+  @@map("api_key_project_access")
 }
 
 model WebhookEvent {

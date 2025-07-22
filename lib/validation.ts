@@ -84,8 +84,40 @@ export const projectCustomizationSchema = z.object({
     .optional(),
 });
 
+// API Key validation schema
+export const apiKeyCreateSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'API key name is required')
+    .max(50, 'API key name must be less than 50 characters')
+    .trim(),
+  projectIds: z
+    .array(z.string().min(1))
+    .min(0, 'Project IDs must be an array')
+    .max(20, 'Cannot select more than 20 projects')
+    .optional()
+    .default([]),
+});
+
+export const apiKeyUpdateSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'API key name is required')
+    .max(50, 'API key name must be less than 50 characters')
+    .trim()
+    .optional(),
+  projectIds: z
+    .array(z.string().min(1))
+    .min(0, 'Project IDs must be an array')
+    .max(20, 'Cannot select more than 20 projects')
+    .optional(),
+  isActive: z.boolean().optional(),
+});
+
 // Type exports for TypeScript
 export type ProjectInput = z.infer<typeof projectSchema>;
 export type FeedbackInput = z.infer<typeof feedbackSchema>;
 export type FeedbackUpdateInput = z.infer<typeof feedbackUpdateSchema>;
 export type ProjectCustomizationInput = z.infer<typeof projectCustomizationSchema>;
+export type ApiKeyCreateInput = z.infer<typeof apiKeyCreateSchema>;
+export type ApiKeyUpdateInput = z.infer<typeof apiKeyUpdateSchema>;
