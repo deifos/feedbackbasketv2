@@ -5,11 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Copy, Eye, EyeOff, Trash2, Settings, Key, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import {
+  Plus,
+  Copy,
+  Eye,
+  EyeOff,
+  Trash2,
+  Key,
+  AlertTriangle,
+  CheckCircle,
+  Loader2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Project {
@@ -40,8 +57,12 @@ export function ApiKeysClient() {
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [showKey, setShowKey] = useState<string | null>(null);
   const [fullKeys, setFullKeys] = useState<Record<string, string>>({});
-  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; keyId?: string; keyName?: string }>({ 
-    isOpen: false 
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    keyId?: string;
+    keyName?: string;
+  }>({
+    isOpen: false,
   });
   const [deleting, setDeleting] = useState(false);
 
@@ -54,7 +75,7 @@ export function ApiKeysClient() {
     try {
       const [keysRes, projectsRes] = await Promise.all([
         fetch('/api/mcp/keys'),
-        fetch('/api/projects')
+        fetch('/api/projects'),
       ]);
 
       if (keysRes.ok) {
@@ -126,7 +147,7 @@ export function ApiKeysClient() {
 
   const deleteApiKey = async () => {
     if (!deleteDialog.keyId) return;
-    
+
     setDeleting(true);
     try {
       const response = await fetch(`/api/mcp/keys/${deleteDialog.keyId}`, {
@@ -210,13 +231,14 @@ export function ApiKeysClient() {
                   id="keyName"
                   placeholder="e.g., Claude Desktop, Cursor IDE"
                   value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
+                  onChange={e => setNewKeyName(e.target.value)}
                 />
               </div>
               <div className="grid w-full items-center gap-2">
                 <Label>Project Access</Label>
                 <p className="text-sm text-muted-foreground">
-                  Select which projects this API key can access. Leave empty to grant access to all projects.
+                  Select which projects this API key can access. Leave empty to grant access to all
+                  projects.
                 </p>
                 <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
                   {projects.length === 0 ? (
@@ -224,12 +246,12 @@ export function ApiKeysClient() {
                       No projects found. Create a project first.
                     </p>
                   ) : (
-                    projects.map((project) => (
+                    projects.map(project => (
                       <div key={project.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={project.id}
                           checked={selectedProjectIds.includes(project.id)}
-                          onCheckedChange={(checked) => {
+                          onCheckedChange={checked => {
                             if (checked) {
                               setSelectedProjectIds(prev => [...prev, project.id]);
                             } else {
@@ -274,14 +296,16 @@ export function ApiKeysClient() {
         </div>
       ) : (
         <div className="space-y-3">
-          {apiKeys.map((apiKey) => (
+          {apiKeys.map(apiKey => (
             <div key={apiKey.id} className="border rounded-md p-3 space-y-3">
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center">
                     <span className="text-sm font-medium text-gray-900">{apiKey.name}</span>
                     {!apiKey.isActive && (
-                      <Badge variant="secondary" className="ml-2 text-xs">Inactive</Badge>
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        Inactive
+                      </Badge>
                     )}
                   </div>
                   <p className="text-xs text-gray-600">
@@ -302,7 +326,11 @@ export function ApiKeysClient() {
                 <div className="flex items-center space-x-2">
                   <Input
                     readOnly
-                    value={showKey === apiKey.id && fullKeys[apiKey.id] ? fullKeys[apiKey.id] : apiKey.keyPreview}
+                    value={
+                      showKey === apiKey.id && fullKeys[apiKey.id]
+                        ? fullKeys[apiKey.id]
+                        : apiKey.keyPreview
+                    }
                     className="font-mono text-xs"
                   />
                   {/* Only show eye button if we have the full key stored */}
@@ -312,7 +340,11 @@ export function ApiKeysClient() {
                       size="sm"
                       onClick={() => setShowKey(showKey === apiKey.id ? null : apiKey.id)}
                     >
-                      {showKey === apiKey.id ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      {showKey === apiKey.id ? (
+                        <EyeOff className="h-3 w-3" />
+                      ) : (
+                        <Eye className="h-3 w-3" />
+                      )}
                     </Button>
                   )}
                   {/* Only show copy button if we have the full key */}
@@ -332,10 +364,12 @@ export function ApiKeysClient() {
               <div>
                 <p className="text-xs text-gray-600 mb-1">Project Access:</p>
                 {!apiKey.projects || apiKey.projects.length === 0 ? (
-                  <Badge variant="secondary" className="text-xs">No projects</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    No projects
+                  </Badge>
                 ) : (
                   <div className="flex flex-wrap gap-1">
-                    {apiKey.projects.slice(0, 3).map((project) => (
+                    {apiKey.projects.slice(0, 3).map(project => (
                       <Badge key={project.id} variant="outline" className="text-xs">
                         {project.name}
                       </Badge>
@@ -354,7 +388,7 @@ export function ApiKeysClient() {
                 <Alert className="py-2">
                   <CheckCircle className="h-3 w-3" />
                   <AlertDescription className="text-xs">
-                    <strong>Copy this key now!</strong> You won't see the full key again.
+                    <strong>Copy this key now!</strong> You won&apos;t see the full key again.
                   </AlertDescription>
                 </Alert>
               )}
@@ -366,7 +400,10 @@ export function ApiKeysClient() {
       {/* Quick usage hint */}
       {apiKeys.length > 0 && (
         <div className="text-xs text-gray-500 mt-2">
-          💡 Add to your AI assistant config: <code className="bg-gray-100 px-1 rounded">npx @feedbackbasket/mcp-server@latest --api-key your_key</code>
+          💡 Add to your AI assistant config:{' '}
+          <code className="bg-gray-100 px-1 rounded">
+            npx @feedbackbasket/mcp-server@latest --api-key your_key
+          </code>
         </div>
       )}
 
@@ -379,10 +416,12 @@ export function ApiKeysClient() {
               Delete API Key
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the API key <strong>"{deleteDialog.keyName}"</strong>?
+              Are you sure you want to delete the API key{' '}
+              <strong>ß&quot;ß{deleteDialog.keyName}&quot;</strong>?
               <br />
               <br />
-              This action cannot be undone and will immediately revoke access for any applications using this key.
+              This action cannot be undone and will immediately revoke access for any applications
+              using this key.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
